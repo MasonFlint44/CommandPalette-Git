@@ -140,22 +140,19 @@ internal sealed partial class GitReposPage : DynamicListPage
             _initialScan.Wait(TimeSpan.FromSeconds(5));
         }
 
-        // On-demand resolution: find the repo by ID and build a CommandItem
+        // On-demand resolution: find the repo by ID and build the same
+        // fully-populated list item used by GetItems, so pinned dock items
+        // get their context menu (MoreCommands) even before this page has
+        // been visited.
         var repo = _repos.FirstOrDefault(r => RepoCommandId(r) == id);
         if (repo == null)
         {
             return null;
         }
 
-        var openFolder = new OpenFolderCommand(repo) { Id = id };
-        var commandItem = new CommandItem(openFolder)
-        {
-            Title = repo.Name,
-            Subtitle = repo.DisplayPath,
-            Icon = GitIcon,
-        };
-        _commandItemCache[id] = commandItem;
-        return commandItem;
+        var listItem = BuildRepoListItem(repo);
+        _commandItemCache[id] = listItem;
+        return listItem;
     }
 
     private static string RepoCommandId(GitRepoInfo repo) => $"repo.{repo.FullPath}";
@@ -213,47 +210,46 @@ internal sealed partial class GitReposPage : DynamicListPage
 
         var items = filtered.Select(repo =>
         {
-            var repoId = RepoCommandId(repo);
-            var openFolder = new OpenFolderCommand(repo) { Id = repoId };
-            var openTerminal = new OpenInTerminalCommand(repo, _settingsManager.TerminalCommand);
-            var openVSCode = new OpenInVSCodeCommand(repo);
-            var copyPath = new CopyRepoPathCommand(repo);
-
-            List<IContextItem> moreCommands =
-            [
-                new CommandContextItem(openTerminal),
-                new CommandContextItem(openVSCode),
-                new CommandContextItem(copyPath),
-            ];
-            if (repo.IsWsl)
-            {
-                moreCommands.Add(new CommandContextItem(new CopyRepoPathCommand(repo, windowsPath: true)));
-            }
-
-            moreCommands.Add(new CommandContextItem(_settingsManager.Settings.SettingsPage) { Title = "Settings", Icon = new IconInfo("\uE713") });
-
-            var listItem = new ListItem(openFolder)
-            {
-                Title = repo.Name,
-                Subtitle = repo.DisplayPath,
-                Icon = GitIcon,
-                Tags = [LocationTag(repo)],
-                MoreCommands = [.. moreCommands],
-            };
+            var listItem = BuildRepoListItem(repo);
 
             // Register for dock pinning
-            var commandItem = new CommandItem(openFolder)
-            {
-                Title = repo.Name,
-                Subtitle = repo.DisplayPath,
-                Icon = GitIcon,
-            };
-            _commandItemCache[repoId] = commandItem;
+            _commandItemCache[RepoCommandId(repo)] = listItem;
 
             return listItem;
         }).ToList();
 
         return items.ToArray();
+    }
+
+    private ListItem BuildRepoListItem(GitRepoInfo repo)
+    {
+        var repoId = RepoCommandId(repo);
+        var openFolder = new OpenFolderCommand(repo) { Id = repoId };
+        var openTerminal = new OpenInTerminalCommand(repo, _settingsManager.TerminalCommand);
+        var openVSCode = new OpenInVSCodeCommand(repo);
+        var copyPath = new CopyRepoPathCommand(repo);
+
+        List<IContextItem> moreCommands =
+        [
+            new CommandContextItem(openTerminal),
+            new CommandContextItem(openVSCode),
+            new CommandContextItem(copyPath),
+        ];
+        if (repo.IsWsl)
+        {
+            moreCommands.Add(new CommandContextItem(new CopyRepoPathCommand(repo, windowsPath: true)));
+        }
+
+        moreCommands.Add(new CommandContextItem(_settingsManager.Settings.SettingsPage) { Title = "Settings", Icon = new IconInfo("\uE713") });
+
+        return new ListItem(openFolder)
+        {
+            Title = repo.Name,
+            Subtitle = repo.DisplayPath,
+            Icon = GitIcon,
+            Tags = [LocationTag(repo)],
+            MoreCommands = [.. moreCommands],
+        };
     }
 
     private List<GitRepoInfo> FilterRepos()
