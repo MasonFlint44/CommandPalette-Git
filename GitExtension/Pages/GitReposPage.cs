@@ -228,7 +228,7 @@ internal sealed partial class GitReposPage : DynamicListPage
         (string Action, InvokableCommand Command)[] openCommands =
         [
             (GitRepoSettingsManager.OpenFolderAction, new OpenFolderCommand(repo)),
-            (GitRepoSettingsManager.OpenTerminalAction, new OpenInTerminalCommand(repo)),
+            (GitRepoSettingsManager.OpenTerminalAction, new OpenInTerminalCommand(repo, _settingsManager)),
             (GitRepoSettingsManager.OpenVSCodeAction, new OpenInVSCodeCommand(repo)),
         ];
 
@@ -248,6 +248,7 @@ internal sealed partial class GitReposPage : DynamicListPage
             moreCommands.Add(new CommandContextItem(new CopyRepoPathCommand(repo, windowsPath: true)));
         }
 
+        moreCommands.Add(new CommandContextItem(new RepoTerminalProfilePage(repo, _settingsManager)));
         moreCommands.Add(new CommandContextItem(_settingsManager.Settings.SettingsPage) { Title = "Settings", Icon = new IconInfo("\uE713") });
 
         return new ListItem(defaultCommand)
