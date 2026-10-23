@@ -19,12 +19,22 @@ internal sealed partial class OpenInVSCodeCommand : InvokableCommand
     {
         _repo = repo;
         Name = "Open in VS Code";
-        Icon = new IconInfo("\uE943"); // Code icon
+        Icon = new IconInfo(""); // Code icon
     }
 
     public override CommandResult Invoke()
     {
-        ShellHelpers.OpenInShell("code", $"\"{_repo.FullPath}\"", _repo.FullPath);
+        if (_repo.IsWsl)
+        {
+            // Open through the WSL remote so VS Code runs its server inside the distro.
+            // No working directory: code is a .cmd and cmd.exe rejects UNC working directories.
+            ShellHelpers.OpenInShell("code", $"--remote \"wsl+{_repo.Distro}\" \"{_repo.LinuxPath}\"");
+        }
+        else
+        {
+            ShellHelpers.OpenInShell("code", $"\"{_repo.FullPath}\"", _repo.FullPath);
+        }
+
         return CommandResult.Dismiss();
     }
 }

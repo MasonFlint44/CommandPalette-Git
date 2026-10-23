@@ -9,22 +9,23 @@ using Microsoft.CommandPalette.Extensions.Toolkit;
 namespace GitExtension.Commands;
 
 /// <summary>
-/// Copies the repository path to the clipboard.
+/// Copies the repository path to the clipboard. For WSL repositories this is the
+/// Linux path, unless <c>windowsPath</c> is set.
 /// </summary>
 internal sealed partial class CopyRepoPathCommand : InvokableCommand
 {
-    private readonly GitRepoInfo _repo;
+    private readonly string _path;
 
-    public CopyRepoPathCommand(GitRepoInfo repo)
+    public CopyRepoPathCommand(GitRepoInfo repo, bool windowsPath = false)
     {
-        _repo = repo;
-        Name = "Copy path";
-        Icon = new IconInfo("\uE8C8"); // Copy icon
+        _path = repo.IsWsl && !windowsPath ? repo.LinuxPath! : repo.FullPath;
+        Name = windowsPath ? "Copy Windows path" : "Copy path";
+        Icon = new IconInfo(""); // Copy icon
     }
 
     public override CommandResult Invoke()
     {
-        ClipboardHelper.SetText(_repo.FullPath);
-        return CommandResult.ShowToast($"Copied: {_repo.FullPath}");
+        ClipboardHelper.SetText(_path);
+        return CommandResult.ShowToast($"Copied: {_path}");
     }
 }

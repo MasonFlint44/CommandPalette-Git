@@ -33,7 +33,7 @@ internal sealed partial class ScanPathsSetupForm : FormContent
         },
         {
             "type": "TextBlock",
-            "text": "Enter the root directories to scan for git repositories. Separate multiple paths with a semicolon (;).",
+            "text": "Enter the root directories to scan for git repositories. Separate multiple paths with a semicolon (;). For WSL, use the distro's network path, e.g. \\\\wsl.localhost\\Ubuntu\\home\\you\\git.",
             "wrap": true
         },
         {
@@ -43,7 +43,7 @@ internal sealed partial class ScanPathsSetupForm : FormContent
             "id": "scanPaths",
             "isRequired": true,
             "errorMessage": "At least one scan path is required",
-            "placeholder": "D:\\Projects;C:\\Users\\me\\repos"
+            "placeholder": "D:\\Projects;\\\\wsl.localhost\\Ubuntu\\home\\me\\git"
         }
     ],
     "actions": [

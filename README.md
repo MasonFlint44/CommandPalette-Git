@@ -13,6 +13,8 @@ A [Command Palette](https://learn.microsoft.com/windows/powertoys/command-palett
 - **Open in Terminal** — Opens Windows Terminal (or cmd fallback) at the repo directory
 - **Terminal startup command** — Optionally run a command automatically when opening in terminal
 - **Copy path** — Copy the full repository path to your clipboard
+- **WSL repositories** — Repos under `\\wsl.localhost\<distro>\` open in VS Code's WSL mode and in a WSL shell, and show their Linux path
+- **Location labels** — Each repo is tagged "Windows" or with its WSL distro name
 - **Search & filter** — Real-time filtering by repo name or path
 - **Dock pinning** — Pin your favorite repos to the Command Palette Dock for instant access
 - **Theme-aware icons** — Git icons that adapt to light and dark themes
@@ -47,9 +49,9 @@ When you first open the extension, you'll be prompted to configure your scan pat
 
 | Setting | Description | Default |
 |---------|-------------|---------|
-| **Scan paths** | Semicolon-separated root directories (e.g. `D:\Projects;C:\repos`) | *(empty)* |
+| **Scan paths** | Semicolon-separated root directories (e.g. `D:\Projects;C:\repos`). For WSL, use the distro's network path (e.g. `\\wsl.localhost\Ubuntu\home\me\git`) | *(empty)* |
 | **Max scan depth** | How deep to recurse into directories (2–6) | 3 |
-| **Terminal startup command** | Command to auto-run when opening a repo in terminal (e.g. `git status`) | *(empty)* |
+| **Terminal startup command** | Command to auto-run when opening a repo in terminal (e.g. `git status`). Runs in cmd.exe for Windows repos and in your Linux shell (with your `.bashrc`/`.zshrc` loaded) for WSL repos | *(empty)* |
 
 You can change these anytime via the "Change scan paths" item at the bottom of the repo list, or through the extension's settings page.
 
@@ -58,9 +60,10 @@ You can change these anytime via the "Change scan paths" item at the bottom of t
 | Action | Trigger | Description |
 |--------|---------|-------------|
 | Open folder | `Enter` (default) | Opens in Windows Explorer |
-| Open in VS Code | Context menu | Runs `code <path>` |
-| Open in terminal | Context menu | Runs `wt.exe -d <path>` |
-| Copy path | Context menu | Copies full path to clipboard |
+| Open in VS Code | Context menu | Runs `code <path>`, or `code --remote wsl+<distro> <linux path>` for WSL repos |
+| Open in terminal | Context menu | Runs `wt.exe -d <path>`, or `wt.exe wsl.exe -d <distro> --cd <linux path>` for WSL repos |
+| Copy path | Context menu | Copies full path to clipboard (the Linux path for WSL repos) |
+| Copy Windows path | Context menu (WSL repos only) | Copies the `\\wsl.localhost\...` path |
 
 ## Contributing
 
