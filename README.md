@@ -10,7 +10,7 @@ A [Command Palette](https://learn.microsoft.com/windows/powertoys/command-palett
 - **Scan & discover** — Recursively finds git repositories under your configured root directories
 - **Open in Explorer** — Default action opens the repo folder in Windows Explorer
 - **Open in VS Code** — Launch VS Code directly at the repository path
-- **Open in Terminal** — Opens Windows Terminal (or cmd fallback) at the repo directory
+- **Open in Terminal** — Opens Windows Terminal at the repo directory, in front of the palette
 - **Copy path** — Copy the full repository path to your clipboard
 - **WSL repositories** — Repos under `\\wsl.localhost\<distro>\` open in VS Code's WSL mode and in a WSL shell, and show their Linux path
 - **Location labels** — Each repo is tagged "Windows" or with its WSL distro name
@@ -60,7 +60,7 @@ You can change these anytime via the "Change scan paths" item at the bottom of t
 |--------|---------|-------------|
 | Open folder | `Enter` (default; see **Default action**) | Opens in Windows Explorer |
 | Open in VS Code | Context menu | Runs `code <path>`, or `code --remote wsl+<distro> <linux path>` for WSL repos |
-| Open in terminal | Context menu | Runs `wt.exe -d <path>`, or `wt.exe wsl.exe -d <distro> --cd <linux path>` for WSL repos |
+| Open in terminal | Context menu | Opens Windows Terminal with `-d <path>`, or `wsl.exe -d <distro> --cd <linux path>` for WSL repos (falls back to `wt.exe` if Terminal isn't a Store install) |
 | Copy path | Context menu | Copies full path to clipboard (the Linux path for WSL repos) |
 | Copy Windows path | Context menu (WSL repos only) | Copies the `\\wsl.localhost\...` path |
 

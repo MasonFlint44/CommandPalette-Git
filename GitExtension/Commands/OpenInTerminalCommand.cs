@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using GitExtension.Models;
+using GitExtension.Services;
 using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
 
@@ -27,11 +28,11 @@ internal sealed partial class OpenInTerminalCommand : InvokableCommand
     {
         if (_repo.IsWsl)
         {
-            ShellHelpers.OpenInShell("wt.exe", $"wsl.exe -d \"{_repo.Distro}\" --cd \"{_repo.LinuxPath}\"");
+            TerminalLauncher.Launch($"wsl.exe -d \"{_repo.Distro}\" --cd \"{_repo.LinuxPath}\"");
         }
         else
         {
-            ShellHelpers.OpenInShell("wt.exe", $"-d \"{_repo.FullPath}\"", _repo.FullPath);
+            TerminalLauncher.Launch($"-d \"{_repo.FullPath}\"");
         }
 
         return CommandResult.Dismiss();
