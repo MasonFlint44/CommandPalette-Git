@@ -18,7 +18,7 @@ public sealed class GitRepoSettingsManager : JsonSettingsManager
     private readonly TextSetting _scanPaths = new(
         Namespaced("scanPaths"),
         "Scan Paths",
-        "Semicolon-separated list of root directories to scan for git repositories (e.g. D:\\Projects;C:\\Users\\me\\repos)",
+        "Semicolon-separated list of root directories to scan for git repositories (e.g. D:\\Projects;C:\\Users\\me\\repos). For WSL, use the distro's network path (e.g. \\\\wsl.localhost\\Ubuntu\\home\\me\\git)",
         string.Empty);
 
     private static readonly List<ChoiceSetSetting.Choice> DepthChoices =
@@ -42,7 +42,7 @@ public sealed class GitRepoSettingsManager : JsonSettingsManager
     private readonly TextSetting _terminalCommand = new(
         Namespaced("terminalCommand"),
         "Terminal Startup Command",
-        "Command to run automatically when opening a repository in terminal (e.g. git status, npm install)",
+        "Command to run automatically when opening a repository in terminal (e.g. git status, npm install). Runs in cmd.exe for Windows repositories and in your Linux shell for WSL repositories",
         string.Empty);
 
     public string ScanPaths => _scanPaths.Value ?? string.Empty;
