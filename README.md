@@ -11,7 +11,6 @@ A [Command Palette](https://learn.microsoft.com/windows/powertoys/command-palett
 - **Open in Explorer** — Default action opens the repo folder in Windows Explorer
 - **Open in VS Code** — Launch VS Code directly at the repository path
 - **Open in Terminal** — Opens Windows Terminal (or cmd fallback) at the repo directory
-- **Terminal startup command** — Optionally run a command automatically when opening in terminal
 - **Copy path** — Copy the full repository path to your clipboard
 - **WSL repositories** — Repos under `\\wsl.localhost\<distro>\` open in VS Code's WSL mode and in a WSL shell, and show their Linux path
 - **Location labels** — Each repo is tagged "Windows" or with its WSL distro name
@@ -52,7 +51,6 @@ When you first open the extension, you'll be prompted to configure your scan pat
 | **Scan paths** | Semicolon-separated root directories (e.g. `D:\Projects;C:\repos`). For WSL, use the distro's network path (e.g. `\\wsl.localhost\Ubuntu\home\me\git`) | *(empty)* |
 | **Max scan depth** | How deep to recurse into directories (2–6) | 3 |
 | **Default action** | What `Enter` does on a repository: open folder, open in terminal, or open in VS Code. The other actions stay in the context menu | Open folder |
-| **Terminal startup command** | Command to auto-run when opening a repo in terminal (e.g. `git status`). Runs in cmd.exe for Windows repos and in your Linux shell (with your `.bashrc`/`.zshrc` loaded) for WSL repos | *(empty)* |
 
 You can change these anytime via the "Change scan paths" item at the bottom of the repo list, or through the extension's settings page.
 

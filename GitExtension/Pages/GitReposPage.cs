@@ -228,7 +228,7 @@ internal sealed partial class GitReposPage : DynamicListPage
         (string Action, InvokableCommand Command)[] openCommands =
         [
             (GitRepoSettingsManager.OpenFolderAction, new OpenFolderCommand(repo)),
-            (GitRepoSettingsManager.OpenTerminalAction, new OpenInTerminalCommand(repo, _settingsManager.TerminalCommand)),
+            (GitRepoSettingsManager.OpenTerminalAction, new OpenInTerminalCommand(repo)),
             (GitRepoSettingsManager.OpenVSCodeAction, new OpenInVSCodeCommand(repo)),
         ];
 

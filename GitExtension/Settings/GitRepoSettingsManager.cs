@@ -39,12 +39,6 @@ public sealed class GitRepoSettingsManager : JsonSettingsManager
         Value = "3",
     };
 
-    private readonly TextSetting _terminalCommand = new(
-        Namespaced("terminalCommand"),
-        "Terminal Startup Command",
-        "Command to run automatically when opening a repository in terminal (e.g. git status, npm install). Runs in cmd.exe for Windows repositories and in your Linux shell for WSL repositories",
-        string.Empty);
-
     public const string OpenFolderAction = "open_folder";
     public const string OpenTerminalAction = "open_terminal";
     public const string OpenVSCodeAction = "open_vscode";
@@ -68,8 +62,6 @@ public sealed class GitRepoSettingsManager : JsonSettingsManager
     public string ScanPaths => _scanPaths.Value ?? string.Empty;
 
     public int MaxDepth => int.TryParse(_maxDepth.Value, out var depth) ? depth : 3;
-
-    public string TerminalCommand => _terminalCommand.Value ?? string.Empty;
 
     public string DefaultAction => _defaultAction.Value ?? OpenFolderAction;
 
@@ -102,7 +94,6 @@ public sealed class GitRepoSettingsManager : JsonSettingsManager
 
         Settings.Add(_scanPaths);
         Settings.Add(_maxDepth);
-        Settings.Add(_terminalCommand);
         Settings.Add(_defaultAction);
 
         LoadSettings();
