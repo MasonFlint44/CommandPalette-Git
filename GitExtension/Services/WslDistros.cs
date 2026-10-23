@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Microsoft.Win32;
 
 namespace GitExtension.Services;
@@ -16,8 +17,22 @@ internal static class WslDistros
 {
     private const string LxssKey = @"Software\Microsoft\Windows\CurrentVersion\Lxss";
 
-    private static readonly object CacheLock = new();
-    private static List<string> _names = [];
+    // A name that matches no registered distro triggers a re-read (it may have just been
+    // registered), but at most this often, since every repo under such a path asks.
+    private static readonly TimeSpan RefreshInterval = TimeSpan.FromSeconds(30);
+
+    private static readonly Lock CacheLock = new();
+    private static List<string>? _names;
+    private static DateTime _readAt;
+
+    /// <summary>The registered distro names.</summary>
+    public static IReadOnlyList<string> RegisteredNames()
+    {
+        lock (CacheLock)
+        {
+            return Names(refresh: false);
+        }
+    }
 
     /// <summary>
     /// The registered spelling of a distro name, e.g. "Ubuntu" for "ubuntu". Scan paths keep
@@ -28,18 +43,23 @@ internal static class WslDistros
     {
         lock (CacheLock)
         {
-            var match = Find(distro);
-            if (match is null)
-            {
-                // The distro may have been registered since the last lookup
-                _names = ReadRegisteredNames();
-                match = Find(distro);
-            }
-
-            return match ?? distro;
+            return Find(Names(refresh: false), distro) ?? Find(Names(refresh: true), distro) ?? distro;
         }
 
-        static string? Find(string distro) => _names.FirstOrDefault(n => string.Equals(n, distro, StringComparison.OrdinalIgnoreCase));
+        static string? Find(List<string> names, string distro) =>
+            names.FirstOrDefault(n => string.Equals(n, distro, StringComparison.OrdinalIgnoreCase));
+    }
+
+    // Call with CacheLock held
+    private static List<string> Names(bool refresh)
+    {
+        if (_names is null || (refresh && DateTime.UtcNow - _readAt > RefreshInterval))
+        {
+            _names = ReadRegisteredNames();
+            _readAt = DateTime.UtcNow;
+        }
+
+        return _names;
     }
 
     private static List<string> ReadRegisteredNames()

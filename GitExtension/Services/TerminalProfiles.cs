@@ -152,21 +152,33 @@ internal static partial class TerminalProfiles
     }
 
     /// <summary>
-    /// The profile a repository opens with: its own choice, then for WSL repositories the
-    /// distro's choice, the distro app's profile and the profile Terminal generated for the
-    /// distro, then the global setting. Null means Windows Terminal's default profile. Choices
-    /// that no longer match a profile are skipped.
+    /// The profile a repository opens with: its own choice, else <see cref="RepoDefault"/>.
+    /// Null means Windows Terminal's default profile. Choices that no longer match a profile
+    /// are skipped.
     /// </summary>
-    public static TerminalProfile? Resolve(GitRepoInfo repo, GitRepoSettingsManager settings, List<TerminalProfile> profiles)
-    {
-        TerminalProfile? ById(string? id) => profiles.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase));
+    public static TerminalProfile? Resolve(GitRepoInfo repo, GitRepoSettingsManager settings, List<TerminalProfile> profiles) =>
+        ById(profiles, settings.GetRepoTerminalProfile(repo.ChoiceKey)) ?? RepoDefault(repo, settings, profiles);
 
-        return ById(settings.GetRepoTerminalProfile(repo.ChoiceKey))
-            ?? (repo.IsWsl
-                ? ById(settings.GetDistroTerminalProfile(repo.Distro!)) ?? DistroAppProfile(profiles, repo.Distro!) ?? ById(GeneratedWslProfileId(repo.Distro!))
-                : null)
-            ?? ById(settings.TerminalProfile);
-    }
+    /// <summary>
+    /// The profile a repository opens with when it has no choice of its own: for WSL, the
+    /// distro's choice, else <see cref="DistroDefault"/>; otherwise the global setting.
+    /// </summary>
+    public static TerminalProfile? RepoDefault(GitRepoInfo repo, GitRepoSettingsManager settings, List<TerminalProfile> profiles) =>
+        repo.IsWsl
+            ? ById(profiles, settings.GetDistroTerminalProfile(repo.Distro!)) ?? DistroDefault(repo.Distro!, settings, profiles)
+            : ById(profiles, settings.TerminalProfile);
+
+    /// <summary>
+    /// The profile a distro's repositories open with when the distro has no choice: the distro
+    /// app's profile, else the profile Terminal generated for the distro, else the global setting.
+    /// </summary>
+    public static TerminalProfile? DistroDefault(string distro, GitRepoSettingsManager settings, List<TerminalProfile> profiles) =>
+        DistroAppProfile(profiles, distro)
+            ?? ById(profiles, GeneratedWslProfileId(distro))
+            ?? ById(profiles, settings.TerminalProfile);
+
+    public static TerminalProfile? ById(List<TerminalProfile> profiles, string? id) =>
+        profiles.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// The GUID Windows Terminal gives the profile it generates for a WSL distro: a version 5
@@ -185,32 +197,40 @@ internal static partial class TerminalProfiles
     }
 
     /// <summary>
-    /// The visible Store app profile for a distro, such as the Ubuntu app's "Ubuntu" profile,
-    /// comparing letters and digits only: one whose name matches the distro's, else one whose
-    /// name starts with it ("Ubuntu-22.04" finds "Ubuntu 22.04.5 LTS"), unless the distro name
-    /// ends in a letter and the profile name goes on with a digit, which means another version
-    /// ("Ubuntu" mustn't find "Ubuntu 22.04 LTS"). First in settings order wins. Only Store
-    /// profiles are matched because their command line is replaced, so a wrong match can at
-    /// worst borrow the wrong look, never run the wrong shell.
+    /// The visible Store app profile for a distro, such as the Ubuntu app's "Ubuntu" profile.
+    /// Names are compared by letters and digits only. A profile belongs to the registered distro
+    /// with the longest name it matches: exactly, or as the start of the profile's name
+    /// ("Ubuntu-22.04" matches "Ubuntu 22.04.5 LTS") unless the distro name ends in a letter
+    /// and the profile name goes on with a digit, which means another version ("Ubuntu"
+    /// mustn't match "Ubuntu 22.04 LTS"). Longest wins, so "Ubuntu Preview" belongs to
+    /// Ubuntu-Preview, not Ubuntu. Of a distro's profiles, an exact match wins, then the first
+    /// in settings order. Only Store profiles are matched, and their command line is replaced
+    /// unless the user set one, so a wrong match normally just borrows the wrong look.
     /// </summary>
     private static TerminalProfile? DistroAppProfile(List<TerminalProfile> profiles, string distro)
     {
-        static string Normalize(string value) => new(value.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
-
         var key = Normalize(distro);
         if (key.Length == 0)
         {
             return null;
         }
 
-        var candidates = profiles.Where(p => !p.Hidden && p.Kind == TerminalProfileKind.StoreApp).ToList();
-        return candidates.FirstOrDefault(p => Normalize(p.Name) == key)
-            ?? candidates.FirstOrDefault(p =>
+        var distroKeys = WslDistros.RegisteredNames().Select(Normalize).Append(key).Where(k => k.Length > 0).Distinct().ToList();
+        var owned = profiles
+            .Where(p => !p.Hidden && p.Kind == TerminalProfileKind.StoreApp)
+            .Where(p =>
             {
                 var name = Normalize(p.Name);
-                return name.StartsWith(key, StringComparison.Ordinal)
-                    && !(char.IsLetter(key[^1]) && char.IsDigit(name[key.Length]));
-            });
+                return Matches(name, key) && !distroKeys.Any(k => k.Length > key.Length && Matches(name, k));
+            })
+            .ToList();
+        return owned.FirstOrDefault(p => Normalize(p.Name) == key) ?? owned.FirstOrDefault();
+
+        static string Normalize(string value) => new(value.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
+
+        static bool Matches(string name, string key) =>
+            name.StartsWith(key, StringComparison.Ordinal)
+            && (name.Length == key.Length || !(char.IsLetter(key[^1]) && char.IsDigit(name[key.Length])));
     }
 
     // A package family name, e.g. CanonicalGroupLimited.Ubuntu_79rhkp1fndgsc

@@ -249,6 +249,11 @@ internal sealed partial class GitReposPage : DynamicListPage
         }
 
         moreCommands.Add(new CommandContextItem(new RepoTerminalProfilePage(repo, _settingsManager)));
+        if (repo.IsWsl)
+        {
+            moreCommands.Add(new CommandContextItem(new RepoTerminalProfilePage(repo, _settingsManager, wholeDistro: true)));
+        }
+
         moreCommands.Add(new CommandContextItem(_settingsManager.Settings.SettingsPage) { Title = "Settings", Icon = new IconInfo("\uE713") });
 
         return new ListItem(defaultCommand)
