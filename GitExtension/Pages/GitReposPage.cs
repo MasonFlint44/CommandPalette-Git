@@ -67,6 +67,8 @@ internal sealed partial class GitReposPage : DynamicListPage
 
     private void OnSettingsChanged(object? sender, Microsoft.CommandPalette.Extensions.Toolkit.Settings settingsArgs)
     {
+        // Cached items were built with the old settings (e.g. Default Action), including pinned ones
+        _commandItemCache.Clear();
         RefreshRepos();
         RaiseItemsChanged();
     }
@@ -223,17 +225,23 @@ internal sealed partial class GitReposPage : DynamicListPage
 
     private ListItem BuildRepoListItem(GitRepoInfo repo)
     {
-        var repoId = RepoCommandId(repo);
-        var openFolder = new OpenFolderCommand(repo) { Id = repoId };
-        var openTerminal = new OpenInTerminalCommand(repo, _settingsManager.TerminalCommand);
-        var openVSCode = new OpenInVSCodeCommand(repo);
-        var copyPath = new CopyRepoPathCommand(repo);
+        (string Action, InvokableCommand Command)[] openCommands =
+        [
+            (GitRepoSettingsManager.OpenFolderAction, new OpenFolderCommand(repo)),
+            (GitRepoSettingsManager.OpenTerminalAction, new OpenInTerminalCommand(repo, _settingsManager.TerminalCommand)),
+            (GitRepoSettingsManager.OpenVSCodeAction, new OpenInVSCodeCommand(repo)),
+        ];
+
+        // The Default Action setting picks what Enter does; the other open actions go in the
+        // context menu. Command Palette already lists the default there, so it isn't repeated.
+        var defaultCommand = openCommands.FirstOrDefault(c => c.Action == _settingsManager.DefaultAction).Command
+            ?? openCommands[0].Command;
+        defaultCommand.Id = RepoCommandId(repo);
 
         List<IContextItem> moreCommands =
         [
-            new CommandContextItem(openTerminal),
-            new CommandContextItem(openVSCode),
-            new CommandContextItem(copyPath),
+            .. openCommands.Where(c => c.Command != defaultCommand).Select(c => new CommandContextItem(c.Command)),
+            new CommandContextItem(new CopyRepoPathCommand(repo)),
         ];
         if (repo.IsWsl)
         {
@@ -242,7 +250,7 @@ internal sealed partial class GitReposPage : DynamicListPage
 
         moreCommands.Add(new CommandContextItem(_settingsManager.Settings.SettingsPage) { Title = "Settings", Icon = new IconInfo("\uE713") });
 
-        return new ListItem(openFolder)
+        return new ListItem(defaultCommand)
         {
             Title = repo.Name,
             Subtitle = repo.DisplayPath,

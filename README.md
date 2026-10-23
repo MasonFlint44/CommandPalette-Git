@@ -51,6 +51,7 @@ When you first open the extension, you'll be prompted to configure your scan pat
 |---------|-------------|---------|
 | **Scan paths** | Semicolon-separated root directories (e.g. `D:\Projects;C:\repos`). For WSL, use the distro's network path (e.g. `\\wsl.localhost\Ubuntu\home\me\git`) | *(empty)* |
 | **Max scan depth** | How deep to recurse into directories (2–6) | 3 |
+| **Default action** | What `Enter` does on a repository: open folder, open in terminal, or open in VS Code. The other actions stay in the context menu | Open folder |
 | **Terminal startup command** | Command to auto-run when opening a repo in terminal (e.g. `git status`). Runs in cmd.exe for Windows repos and in your Linux shell (with your `.bashrc`/`.zshrc` loaded) for WSL repos | *(empty)* |
 
 You can change these anytime via the "Change scan paths" item at the bottom of the repo list, or through the extension's settings page.
@@ -59,7 +60,7 @@ You can change these anytime via the "Change scan paths" item at the bottom of t
 
 | Action | Trigger | Description |
 |--------|---------|-------------|
-| Open folder | `Enter` (default) | Opens in Windows Explorer |
+| Open folder | `Enter` (default; see **Default action**) | Opens in Windows Explorer |
 | Open in VS Code | Context menu | Runs `code <path>`, or `code --remote wsl+<distro> <linux path>` for WSL repos |
 | Open in terminal | Context menu | Runs `wt.exe -d <path>`, or `wt.exe wsl.exe -d <distro> --cd <linux path>` for WSL repos |
 | Copy path | Context menu | Copies full path to clipboard (the Linux path for WSL repos) |
