@@ -30,16 +30,17 @@ internal enum TerminalProfileKind
 
 /// <summary>
 /// A Windows Terminal profile. <see cref="Id"/> is its GUID ("{...}"); <see cref="Label"/> is
-/// its name, with a suffix when several profiles share that name.
+/// its name, with a suffix when several profiles share that name. <see cref="HasCommandLine"/>
+/// is whether settings.json sets its command line, i.e. the user wrote or overrode it.
 /// </summary>
-internal sealed record TerminalProfile(string Id, string Name, string Label, bool Hidden, TerminalProfileKind Kind)
+internal sealed record TerminalProfile(string Id, string Name, string Label, bool Hidden, TerminalProfileKind Kind, bool HasCommandLine)
 {
     /// <summary>
-    /// Whether, for a WSL repository, the profile only launches a distro. Its command line is
-    /// then replaced with wsl.exe (see OpenInTerminalCommand); a Store profile on a WSL repo is
-    /// assumed to be a distro app's launcher.
+    /// Whether, for a WSL repository, the profile only launches a distro: one Terminal generated
+    /// or a Store app installed (assumed to be a distro app's), with its command line left as
+    /// shipped. Its command line is then replaced with wsl.exe (see OpenInTerminalCommand).
     /// </summary>
-    public bool IsDistroLauncher => Kind is TerminalProfileKind.GeneratedWsl or TerminalProfileKind.StoreApp;
+    public bool IsDistroLauncher => Kind != TerminalProfileKind.Other && !HasCommandLine;
 }
 
 /// <summary>
@@ -75,7 +76,7 @@ internal static partial class TerminalProfiles
             return [];
         }
 
-        var entries = new List<(string Id, string Name, bool Hidden, TerminalProfileKind Kind)>();
+        var entries = new List<(string Id, string Name, bool Hidden, TerminalProfileKind Kind, bool HasCommandLine)>();
         try
         {
             using var document = JsonDocument.Parse(json, new JsonDocumentOptions
@@ -106,7 +107,7 @@ internal static partial class TerminalProfiles
                     var kind = source == GeneratedWslSource ? TerminalProfileKind.GeneratedWsl
                         : source is not null && PackageFamilyNameRegex().IsMatch(source) ? TerminalProfileKind.StoreApp
                         : TerminalProfileKind.Other;
-                    entries.Add((id.ToString("B"), name, hidden, kind));
+                    entries.Add((id.ToString("B"), name, hidden, kind, !string.IsNullOrWhiteSpace(GetString(profile, "commandline"))));
                 }
             }
         }
@@ -144,7 +145,7 @@ internal static partial class TerminalProfiles
                 label = $"{entry.Name} ({numbered[entry.Name]})";
             }
 
-            result.Add(new TerminalProfile(entry.Id, entry.Name, label, entry.Hidden, entry.Kind));
+            result.Add(new TerminalProfile(entry.Id, entry.Name, label, entry.Hidden, entry.Kind, entry.HasCommandLine));
         }
 
         return result;
@@ -156,11 +157,11 @@ internal static partial class TerminalProfiles
     /// distro, then the global setting. Null means Windows Terminal's default profile. Choices
     /// that no longer match a profile are skipped.
     /// </summary>
-    public static TerminalProfile? Resolve(GitRepoInfo repo, GitRepoSettingsManager settings, List<TerminalProfile> profiles, bool includeRepoChoice = true)
+    public static TerminalProfile? Resolve(GitRepoInfo repo, GitRepoSettingsManager settings, List<TerminalProfile> profiles)
     {
         TerminalProfile? ById(string? id) => profiles.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase));
 
-        return (includeRepoChoice ? ById(settings.GetRepoTerminalProfile(repo.FullPath)) : null)
+        return ById(settings.GetRepoTerminalProfile(repo.ChoiceKey))
             ?? (repo.IsWsl
                 ? ById(settings.GetDistroTerminalProfile(repo.Distro!)) ?? DistroAppProfile(profiles, repo.Distro!) ?? ById(GeneratedWslProfileId(repo.Distro!))
                 : null)
@@ -184,33 +185,32 @@ internal static partial class TerminalProfiles
     }
 
     /// <summary>
-    /// The visible Store app profile for a distro, such as the Ubuntu app's "Ubuntu" profile:
-    /// one whose name matches the distro's, comparing letters and digits only, else one whose
-    /// name contains it (so "Ubuntu-24.04" finds "Ubuntu 24.04 LTS"). First in settings order wins.
-    /// Only Store profiles are matched because their command line is replaced, so a loose match
-    /// can at worst borrow the wrong look, never run the wrong shell.
+    /// The visible Store app profile for a distro, such as the Ubuntu app's "Ubuntu" profile,
+    /// comparing letters and digits only: one whose name matches the distro's, else one whose
+    /// name starts with it ("Ubuntu-22.04" finds "Ubuntu 22.04.5 LTS"), unless the distro name
+    /// ends in a letter and the profile name goes on with a digit, which means another version
+    /// ("Ubuntu" mustn't find "Ubuntu 22.04 LTS"). First in settings order wins. Only Store
+    /// profiles are matched because their command line is replaced, so a wrong match can at
+    /// worst borrow the wrong look, never run the wrong shell.
     /// </summary>
     private static TerminalProfile? DistroAppProfile(List<TerminalProfile> profiles, string distro)
     {
         static string Normalize(string value) => new(value.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
 
         var key = Normalize(distro);
+        if (key.Length == 0)
+        {
+            return null;
+        }
+
         var candidates = profiles.Where(p => !p.Hidden && p.Kind == TerminalProfileKind.StoreApp).ToList();
         return candidates.FirstOrDefault(p => Normalize(p.Name) == key)
-            ?? candidates.FirstOrDefault(p => ContainsAsWhole(Normalize(p.Name), key));
-
-        // Digits next to the match mean another version: "Ubuntu" mustn't match "Ubuntu 22.04 LTS"
-        static bool ContainsAsWhole(string name, string key)
-        {
-            var index = name.IndexOf(key, StringComparison.Ordinal);
-            if (index < 0 || key.Length == 0)
+            ?? candidates.FirstOrDefault(p =>
             {
-                return false;
-            }
-
-            var end = index + key.Length;
-            return (index == 0 || !char.IsDigit(name[index - 1])) && (end == name.Length || !char.IsDigit(name[end]));
-        }
+                var name = Normalize(p.Name);
+                return name.StartsWith(key, StringComparison.Ordinal)
+                    && !(char.IsLetter(key[^1]) && char.IsDigit(name[key.Length]));
+            });
     }
 
     // A package family name, e.g. CanonicalGroupLimited.Ubuntu_79rhkp1fndgsc

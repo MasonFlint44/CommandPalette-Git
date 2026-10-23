@@ -50,7 +50,7 @@ internal sealed partial class RepoTerminalProfileForm : FormContent
 
         var profiles = TerminalProfiles.Load();
         var current = TerminalProfiles.Resolve(repo, settingsManager, profiles);
-        var repoChoice = settingsManager.GetRepoTerminalProfile(repo.FullPath);
+        var repoChoice = settingsManager.GetRepoTerminalProfile(repo.ChoiceKey);
 
         var choices = new JsonArray(new JsonObject { ["title"] = "Use default", ["value"] = UseDefault });
         foreach (var profile in profiles.Where(p => !p.Hidden))
@@ -123,11 +123,11 @@ internal sealed partial class RepoTerminalProfileForm : FormContent
         {
             // Also drop this repository's own choice, so the distro-wide one takes effect here
             saved = _settingsManager.SetDistroTerminalProfile(_repo.Distro!, profileId)
-                && _settingsManager.SetRepoTerminalProfile(_repo.FullPath, null);
+                && _settingsManager.SetRepoTerminalProfile(_repo.ChoiceKey, null);
         }
         else
         {
-            saved = _settingsManager.SetRepoTerminalProfile(_repo.FullPath, profileId);
+            saved = _settingsManager.SetRepoTerminalProfile(_repo.ChoiceKey, profileId);
         }
 
         return saved

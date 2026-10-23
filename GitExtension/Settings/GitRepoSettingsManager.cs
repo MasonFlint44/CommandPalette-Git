@@ -69,7 +69,7 @@ public sealed class GitRepoSettingsManager : JsonSettingsManager
     private readonly ChoiceSetSetting _terminalProfile = new(
         Namespaced("terminalProfile"),
         "Terminal Profile",
-        "Windows Terminal profile to open repositories with. WSL repositories use the profile Terminal generated for their distro instead, and each repository or distro can choose its own from a repository's context menu",
+        "Windows Terminal profile to open Windows repositories with. WSL repositories use their distro app's profile (e.g. Ubuntu's) or the one Terminal generated for the distro, falling back to this only if neither exists. Each repository or distro can choose its own from a repository's context menu",
         [
             new("Windows Terminal default", DefaultTerminalProfile),
             .. TerminalProfiles.Load().Where(p => !p.Hidden).Select(p => new ChoiceSetSetting.Choice(p.Label, p.Id)),
@@ -78,7 +78,7 @@ public sealed class GitRepoSettingsManager : JsonSettingsManager
         Value = DefaultTerminalProfile,
     };
 
-    // Per-repository (repo path -> profile GUID) and per-distro (distro -> profile GUID)
+    // Per-repository (GitRepoInfo.ChoiceKey -> profile GUID) and per-distro (distro -> profile GUID)
     // profile choices, kept in their own file because the settings file only holds the
     // settings declared above.
     private readonly Dictionary<string, string> _repoTerminalProfiles = new(StringComparer.OrdinalIgnoreCase);
@@ -93,11 +93,11 @@ public sealed class GitRepoSettingsManager : JsonSettingsManager
 
     public string TerminalProfile => _terminalProfile.Value ?? DefaultTerminalProfile;
 
-    public string? GetRepoTerminalProfile(string repoPath)
+    public string? GetRepoTerminalProfile(string repoKey)
     {
         lock (_terminalProfileChoicesLock)
         {
-            return _repoTerminalProfiles.GetValueOrDefault(repoPath);
+            return _repoTerminalProfiles.GetValueOrDefault(repoKey);
         }
     }
 
@@ -113,8 +113,8 @@ public sealed class GitRepoSettingsManager : JsonSettingsManager
     /// Sets the profile a repository opens with, or clears it when <paramref name="profileId"/> is null.
     /// Returns false if the choice couldn't be saved.
     /// </summary>
-    public bool SetRepoTerminalProfile(string repoPath, string? profileId) =>
-        SetTerminalProfileChoice(_repoTerminalProfiles, repoPath, profileId);
+    public bool SetRepoTerminalProfile(string repoKey, string? profileId) =>
+        SetTerminalProfileChoice(_repoTerminalProfiles, repoKey, profileId);
 
     /// <summary>
     /// Sets the profile a WSL distro's repositories open with, or clears it when

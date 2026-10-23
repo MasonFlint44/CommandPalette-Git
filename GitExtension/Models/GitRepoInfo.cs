@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Text.RegularExpressions;
+using GitExtension.Services;
 
 namespace GitExtension.Models;
 
@@ -19,7 +20,7 @@ public sealed partial class GitRepoInfo
         var match = WslPathRegex().Match(fullPath);
         if (match.Success)
         {
-            Distro = match.Groups["distro"].Value;
+            Distro = WslDistros.Canonicalize(match.Groups["distro"].Value);
             LinuxPath = match.Groups["path"].Success ? match.Groups["path"].Value.Replace('\\', '/') : "/";
         }
     }
@@ -37,6 +38,12 @@ public sealed partial class GitRepoInfo
     public string? LinuxPath { get; }
 
     public bool IsWsl => Distro is not null;
+
+    /// <summary>
+    /// Identifies the repository in saved choices: distro and Linux path for WSL, so switching a
+    /// scan path between \\wsl$ and \\wsl.localhost (or its case) doesn't lose them.
+    /// </summary>
+    public string ChoiceKey => IsWsl ? $"wsl:{Distro}:{LinuxPath}" : FullPath;
 
     /// <summary>The path shown to the user: "Ubuntu: /home/me/repo" for WSL, the Windows path otherwise.</summary>
     public string DisplayPath => IsWsl ? $"{Distro}: {LinuxPath}" : FullPath;
