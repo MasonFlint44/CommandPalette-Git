@@ -11,7 +11,7 @@ A [Command Palette](https://learn.microsoft.com/windows/powertoys/command-palett
 - **Open in Explorer** — Default action opens the repo folder in Windows Explorer
 - **Open in VS Code** — Launch VS Code directly at the repository path
 - **Open in Terminal** — Opens Windows Terminal at the repo directory, in front of the palette
-- **Terminal profiles** — Pick the Windows Terminal profile repos open with, globally or per repo; WSL repos use their distro's profile automatically
+- **Terminal profiles** — Pick the Windows Terminal profile repos open with: globally, per WSL distro, or per repo
 - **Copy path** — Copy the full repository path to your clipboard
 - **WSL repositories** — Repos under `\\wsl.localhost\<distro>\` open in VS Code's WSL mode and in a WSL shell, and show their Linux path
 - **Location labels** — Each repo is tagged "Windows" or with its WSL distro name
@@ -51,7 +51,7 @@ When you first open the extension, you'll be prompted to configure your scan pat
 |---------|-------------|---------|
 | **Scan paths** | Semicolon-separated root directories (e.g. `D:\Projects;C:\repos`). For WSL, use the distro's network path (e.g. `\\wsl.localhost\Ubuntu\home\me\git`) | *(empty)* |
 | **Max scan depth** | How deep to recurse into directories (2–6) | 3 |
-| **Terminal profile** | Windows Terminal profile to open repos with. Order: the repo's own choice ("Set terminal profile…" in its context menu), then for WSL repos the profile named after the distro, then this setting, then Windows Terminal's default | Windows Terminal default |
+| **Terminal profile** | Windows Terminal profile to open repos with. Order: the repo's own choice, then for WSL repos the distro's choice and the profile Terminal generated for the distro, then this setting, then Windows Terminal's default. Repo and distro choices are made from "Set terminal profile…" in a repo's context menu | Windows Terminal default |
 | **Default action** | What `Enter` does on a repository: open folder, open in terminal, or open in VS Code. The other actions stay in the context menu | Open folder |
 
 You can change these anytime via the "Change scan paths" item at the bottom of the repo list, or through the extension's settings page.
@@ -62,8 +62,8 @@ You can change these anytime via the "Change scan paths" item at the bottom of t
 |--------|---------|-------------|
 | Open folder | `Enter` (default; see **Default action**) | Opens in Windows Explorer |
 | Open in VS Code | Context menu | Runs `code <path>`, or `code --remote wsl+<distro> <linux path>` for WSL repos |
-| Open in terminal | Context menu | Opens Windows Terminal with the repo's profile (`-p <profile> -d <path>`). WSL repos with no matching profile run `wsl.exe -d <distro> --cd <linux path>`. Falls back to `wt.exe` if Terminal isn't a Store install |
-| Set terminal profile… | Context menu | Chooses the Windows Terminal profile this repo opens with |
+| Open in terminal | Context menu | Opens Windows Terminal with the repo's profile (`-p <profile> -d <path>`). WSL repos run `wsl.exe -d <distro> --cd <linux path>` in their profile so they always start in the repo folder. Falls back to `wt.exe` if Terminal isn't a Store install |
+| Set terminal profile… | Context menu | Chooses the Windows Terminal profile this repo opens with, or for a WSL repo, every repo in its distro |
 | Copy path | Context menu | Copies full path to clipboard (the Linux path for WSL repos) |
 | Copy Windows path | Context menu (WSL repos only) | Copies the `\\wsl.localhost\...` path |
 

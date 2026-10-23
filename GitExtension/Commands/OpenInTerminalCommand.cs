@@ -30,21 +30,19 @@ internal sealed partial class OpenInTerminalCommand : InvokableCommand
     public override CommandResult Invoke()
     {
         var profile = TerminalProfiles.Resolve(_repo, _settingsManager, TerminalProfiles.Load());
+        var profileArgument = profile is null ? string.Empty : $"-p \"{profile.Id}\" ";
 
-        if (profile is not null)
+        if (_repo.IsWsl)
         {
-            // The profile keeps its own command line. For WSL profiles, Windows Terminal turns a
-            // \\wsl.localhost starting directory into the matching Linux folder.
-            TerminalLauncher.Launch($"-p \"{profile.Id}\" -d \"{_repo.FullPath}\"");
-        }
-        else if (_repo.IsWsl)
-        {
-            // No profile for this distro: run wsl.exe in Windows Terminal's default profile
-            TerminalLauncher.Launch($"wsl.exe -d \"{_repo.Distro}\" --cd \"{_repo.LinuxPath}\"");
+            // Run wsl.exe in place of the profile's own command line, which may not start in the
+            // repo: a distro app's launcher (e.g. ubuntu.exe) opens interactive shells in the home
+            // folder whatever the starting directory. The profile still provides the look
+            // (colours, icon, font, tab title).
+            TerminalLauncher.Launch($"{profileArgument}wsl.exe -d \"{_repo.Distro}\" --cd \"{_repo.LinuxPath}\"");
         }
         else
         {
-            TerminalLauncher.Launch($"-d \"{_repo.FullPath}\"");
+            TerminalLauncher.Launch($"{profileArgument}-d \"{_repo.FullPath}\"");
         }
 
         return CommandResult.Dismiss();

@@ -69,19 +69,21 @@ public sealed class GitRepoSettingsManager : JsonSettingsManager
     private readonly ChoiceSetSetting _terminalProfile = new(
         Namespaced("terminalProfile"),
         "Terminal Profile",
-        "Windows Terminal profile to open repositories with. WSL repositories use the profile named after their distro when there is one, and each repository can choose its own from its context menu",
+        "Windows Terminal profile to open repositories with. WSL repositories use the profile Terminal generated for their distro instead, and each repository or distro can choose its own from a repository's context menu",
         [
             new("Windows Terminal default", DefaultTerminalProfile),
-            .. TerminalProfiles.Load().Select(p => new ChoiceSetSetting.Choice(p.Name, p.Id)),
+            .. TerminalProfiles.Load().Where(p => !p.Hidden).Select(p => new ChoiceSetSetting.Choice(p.Label, p.Id)),
         ])
     {
         Value = DefaultTerminalProfile,
     };
 
-    // Per-repository profile choices (repo path -> profile GUID), kept in their own file
-    // because the settings file only holds the settings declared above.
+    // Per-repository (repo path -> profile GUID) and per-distro (distro -> profile GUID)
+    // profile choices, kept in their own file because the settings file only holds the
+    // settings declared above.
     private readonly Dictionary<string, string> _repoTerminalProfiles = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Lock _repoTerminalProfilesLock = new();
+    private readonly Dictionary<string, string> _distroTerminalProfiles = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Lock _terminalProfileChoicesLock = new();
 
     public string ScanPaths => _scanPaths.Value ?? string.Empty;
 
@@ -93,9 +95,17 @@ public sealed class GitRepoSettingsManager : JsonSettingsManager
 
     public string? GetRepoTerminalProfile(string repoPath)
     {
-        lock (_repoTerminalProfilesLock)
+        lock (_terminalProfileChoicesLock)
         {
             return _repoTerminalProfiles.GetValueOrDefault(repoPath);
+        }
+    }
+
+    public string? GetDistroTerminalProfile(string distro)
+    {
+        lock (_terminalProfileChoicesLock)
+        {
+            return _distroTerminalProfiles.GetValueOrDefault(distro);
         }
     }
 
@@ -103,29 +113,36 @@ public sealed class GitRepoSettingsManager : JsonSettingsManager
     /// Sets the profile a repository opens with, or clears it when <paramref name="profileId"/> is null.
     /// Returns false if the choice couldn't be saved.
     /// </summary>
-    public bool SetRepoTerminalProfile(string repoPath, string? profileId)
+    public bool SetRepoTerminalProfile(string repoPath, string? profileId) =>
+        SetTerminalProfileChoice(_repoTerminalProfiles, repoPath, profileId);
+
+    /// <summary>
+    /// Sets the profile a WSL distro's repositories open with, or clears it when
+    /// <paramref name="profileId"/> is null. Returns false if the choice couldn't be saved.
+    /// </summary>
+    public bool SetDistroTerminalProfile(string distro, string? profileId) =>
+        SetTerminalProfileChoice(_distroTerminalProfiles, distro, profileId);
+
+    private bool SetTerminalProfileChoice(Dictionary<string, string> choices, string key, string? profileId)
     {
-        lock (_repoTerminalProfilesLock)
+        lock (_terminalProfileChoicesLock)
         {
             if (profileId is null)
             {
-                _repoTerminalProfiles.Remove(repoPath);
+                choices.Remove(key);
             }
             else
             {
-                _repoTerminalProfiles[repoPath] = profileId;
+                choices[key] = profileId;
             }
 
             try
             {
-                using var stream = File.Create(RepoProfilesJsonPath());
+                using var stream = File.Create(TerminalProfileChoicesJsonPath());
                 using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true });
                 writer.WriteStartObject();
-                foreach (var (path, id) in _repoTerminalProfiles)
-                {
-                    writer.WriteString(path, id);
-                }
-
+                WriteChoices(writer, "repos", _repoTerminalProfiles);
+                WriteChoices(writer, "distros", _distroTerminalProfiles);
                 writer.WriteEndObject();
                 return true;
             }
@@ -134,24 +151,44 @@ public sealed class GitRepoSettingsManager : JsonSettingsManager
                 return false;
             }
         }
+
+        static void WriteChoices(Utf8JsonWriter writer, string name, Dictionary<string, string> choices)
+        {
+            writer.WriteStartObject(name);
+            foreach (var (key, id) in choices)
+            {
+                writer.WriteString(key, id);
+            }
+
+            writer.WriteEndObject();
+        }
     }
 
-    private void LoadRepoTerminalProfiles()
+    private void LoadTerminalProfileChoices()
     {
         try
         {
-            using var document = JsonDocument.Parse(File.ReadAllText(RepoProfilesJsonPath()));
-            foreach (var entry in document.RootElement.EnumerateObject())
-            {
-                if (entry.Value.ValueKind == JsonValueKind.String)
-                {
-                    _repoTerminalProfiles[entry.Name] = entry.Value.GetString()!;
-                }
-            }
+            using var document = JsonDocument.Parse(File.ReadAllText(TerminalProfileChoicesJsonPath()));
+            ReadChoices(document.RootElement, "repos", _repoTerminalProfiles);
+            ReadChoices(document.RootElement, "distros", _distroTerminalProfiles);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
         {
-            // No choices saved yet, or the file is unreadable: every repo uses the default
+            // No choices saved yet, or the file is unreadable: everything uses the defaults
+        }
+
+        static void ReadChoices(JsonElement root, string name, Dictionary<string, string> choices)
+        {
+            if (root.TryGetProperty(name, out var section) && section.ValueKind == JsonValueKind.Object)
+            {
+                foreach (var entry in section.EnumerateObject())
+                {
+                    if (entry.Value.ValueKind == JsonValueKind.String)
+                    {
+                        choices[entry.Name] = entry.Value.GetString()!;
+                    }
+                }
+            }
         }
     }
 
@@ -178,8 +215,8 @@ public sealed class GitRepoSettingsManager : JsonSettingsManager
         return Path.Combine(directory, "GitExtension.settings.json");
     }
 
-    private static string RepoProfilesJsonPath() =>
-        Path.Combine(Path.GetDirectoryName(SettingsJsonPath())!, "GitExtension.repoProfiles.json");
+    private static string TerminalProfileChoicesJsonPath() =>
+        Path.Combine(Path.GetDirectoryName(SettingsJsonPath())!, "GitExtension.terminalProfiles.json");
 
     public GitRepoSettingsManager()
     {
@@ -191,7 +228,7 @@ public sealed class GitRepoSettingsManager : JsonSettingsManager
         Settings.Add(_terminalProfile);
 
         LoadSettings();
-        LoadRepoTerminalProfiles();
+        LoadTerminalProfileChoices();
 
         Settings.SettingsChanged += (s, a) => SaveSettings();
     }

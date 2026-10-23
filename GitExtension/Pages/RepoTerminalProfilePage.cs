@@ -13,7 +13,8 @@ using Microsoft.CommandPalette.Extensions.Toolkit;
 namespace GitExtension.Pages;
 
 /// <summary>
-/// Lets the user pick the Windows Terminal profile a single repository opens with.
+/// Lets the user pick the Windows Terminal profile a repository opens with, or for a WSL
+/// repository, the profile every repository in its distro opens with.
 /// </summary>
 internal sealed partial class RepoTerminalProfilePage : ContentPage
 {
@@ -36,6 +37,8 @@ internal sealed partial class RepoTerminalProfilePage : ContentPage
 internal sealed partial class RepoTerminalProfileForm : FormContent
 {
     private const string UseDefault = "default";
+    private const string ThisRepo = "repo";
+    private const string WholeDistro = "distro";
 
     private readonly GitRepoInfo _repo;
     private readonly GitRepoSettingsManager _settingsManager;
@@ -46,41 +49,54 @@ internal sealed partial class RepoTerminalProfileForm : FormContent
         _settingsManager = settingsManager;
 
         var profiles = TerminalProfiles.Load();
-        var fallback = TerminalProfiles.Resolve(repo, settingsManager, profiles, includeRepoChoice: false);
-        var current = settingsManager.GetRepoTerminalProfile(repo.FullPath);
+        var current = TerminalProfiles.Resolve(repo, settingsManager, profiles);
+        var repoChoice = settingsManager.GetRepoTerminalProfile(repo.FullPath);
 
-        var choices = new JsonArray(new JsonObject
+        var choices = new JsonArray(new JsonObject { ["title"] = "Use default", ["value"] = UseDefault });
+        foreach (var profile in profiles.Where(p => !p.Hidden))
         {
-            ["title"] = $"Use default ({fallback?.Name ?? "Windows Terminal default"})",
-            ["value"] = UseDefault,
-        });
-        foreach (var profile in profiles)
-        {
-            choices.Add((JsonNode)new JsonObject { ["title"] = profile.Name, ["value"] = profile.Id });
+            choices.Add((JsonNode)new JsonObject { ["title"] = profile.Label, ["value"] = profile.Id });
         }
 
         // Built as JSON nodes so profile names are escaped properly
+        var body = new JsonArray(
+            new JsonObject
+            {
+                ["type"] = "TextBlock",
+                ["text"] = $"{repo.Name} currently opens with: {current?.Label ?? "Windows Terminal's default profile"}",
+                ["wrap"] = true,
+            },
+            new JsonObject
+            {
+                ["type"] = "Input.ChoiceSet",
+                ["id"] = "profile",
+                ["label"] = "Terminal profile",
+                ["style"] = "compact",
+                ["value"] = profiles.Any(p => p.Id == repoChoice) ? repoChoice : UseDefault,
+                ["choices"] = choices,
+            });
+
+        if (repo.IsWsl)
+        {
+            body.Add((JsonNode)new JsonObject
+            {
+                ["type"] = "Input.ChoiceSet",
+                ["id"] = "scope",
+                ["label"] = "Apply to",
+                ["style"] = "expanded",
+                ["value"] = ThisRepo,
+                ["choices"] = new JsonArray(
+                    new JsonObject { ["title"] = "This repository", ["value"] = ThisRepo },
+                    new JsonObject { ["title"] = $"All {repo.Distro} repositories", ["value"] = WholeDistro }),
+            });
+        }
+
         var card = new JsonObject
         {
             ["$schema"] = "http://adaptivecards.io/schemas/adaptive-card.json",
             ["type"] = "AdaptiveCard",
             ["version"] = "1.6",
-            ["body"] = new JsonArray(
-                new JsonObject
-                {
-                    ["type"] = "TextBlock",
-                    ["text"] = $"Choose the Windows Terminal profile {repo.Name} opens with.",
-                    ["wrap"] = true,
-                },
-                new JsonObject
-                {
-                    ["type"] = "Input.ChoiceSet",
-                    ["id"] = "profile",
-                    ["label"] = "Terminal profile",
-                    ["style"] = "compact",
-                    ["value"] = profiles.Any(p => p.Id == current) ? current : UseDefault,
-                    ["choices"] = choices,
-                }),
+            ["body"] = body,
             ["actions"] = new JsonArray(
                 new JsonObject
                 {
@@ -94,13 +110,26 @@ internal sealed partial class RepoTerminalProfileForm : FormContent
 
     public override CommandResult SubmitForm(string payload)
     {
-        var profile = JsonNode.Parse(payload)?["profile"]?.ToString();
+        var inputs = JsonNode.Parse(payload);
+        var profile = inputs?["profile"]?.ToString();
         if (string.IsNullOrEmpty(profile))
         {
             return CommandResult.GoBack();
         }
 
-        var saved = _settingsManager.SetRepoTerminalProfile(_repo.FullPath, profile == UseDefault ? null : profile);
+        var profileId = profile == UseDefault ? null : profile;
+        bool saved;
+        if (_repo.IsWsl && inputs?["scope"]?.ToString() == WholeDistro)
+        {
+            // Also drop this repository's own choice, so the distro-wide one takes effect here
+            saved = _settingsManager.SetDistroTerminalProfile(_repo.Distro!, profileId)
+                && _settingsManager.SetRepoTerminalProfile(_repo.FullPath, null);
+        }
+        else
+        {
+            saved = _settingsManager.SetRepoTerminalProfile(_repo.FullPath, profileId);
+        }
+
         return saved
             ? CommandResult.GoBack()
             : CommandResult.ShowToast("Couldn't save the terminal profile");
