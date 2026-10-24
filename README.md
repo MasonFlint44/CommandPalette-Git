@@ -22,26 +22,24 @@ A [Command Palette](https://learn.microsoft.com/windows/powertoys/command-palett
 
 ## Getting started
 
-### Install from the Microsoft Store
+This is a fork of [niels9001/CommandPalette-Git](https://github.com/niels9001/CommandPalette-Git) with its own package name, so it installs alongside the original. If you have both, disable one in Command Palette's extension settings so repos aren't listed twice. The fork keeps its own settings, so scan paths need setting up again.
 
-*(Coming soon)*
-
-### Build from source
+### Build and install from source
 
 **Prerequisites:**
-- [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
+- [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0) or later
 - [PowerToys](https://github.com/microsoft/PowerToys) with Command Palette enabled
-- Visual Studio 2022 (17.13+) or `dotnet` CLI
+- Windows Developer Mode (Settings > System > For developers), to install a build that isn't signed
 
-**Build & deploy:**
+**Build & install:**
 
 ```powershell
-git clone https://github.com/niels9001/CommandPalette-Git.git
+git clone https://github.com/MasonFlint44/CommandPalette-Git.git
 cd CommandPalette-Git
-dotnet build GitExtension.sln -c Debug
+.\scripts\Install-Dev.ps1
 ```
 
-Then deploy the MSIX package from Visual Studio, or use `dotnet publish` with the appropriate profile.
+This builds the extension and installs it for your user from the build output. Run it again after making changes; `-Uninstall` removes it. You can also deploy from Visual Studio 2022 (17.13+).
 
 ## Configuration
 
