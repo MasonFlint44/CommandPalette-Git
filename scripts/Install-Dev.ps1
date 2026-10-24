@@ -33,6 +33,15 @@ if ($devMode.AllowDevelopmentWithoutDevLicense -ne 1) {
     throw 'Developer Mode is off. Turn it on in Settings > System > For developers, then run this again.'
 }
 
+# An installed build runs from the build folder, so stop it before building over it. Only this
+# package's process is stopped, not other installs such as the Store version of the original.
+$installed = Get-AppxPackage $packageName
+if ($installed) {
+    Get-Process GitExtension -ErrorAction SilentlyContinue |
+        Where-Object { $_.Path -and $_.Path.StartsWith($installed.InstallLocation, [StringComparison]::OrdinalIgnoreCase) } |
+        Stop-Process -Force
+}
+
 $project = Join-Path $PSScriptRoot '..\GitExtension'
 $runtime = "win-$($Platform.ToLowerInvariant())"
 dotnet build "$project\GitExtension.csproj" -p:Platform=$Platform -r $runtime --nologo
@@ -47,7 +56,6 @@ if (-not $manifest) {
     throw "No AppxManifest.xml in the build output for $Platform."
 }
 
-# Stops the running extension so its files can be replaced
 Add-AppxPackage -Register $manifest.FullName -ForceApplicationShutdown
 Write-Host "Installed $packageName from $($manifest.DirectoryName)."
 Write-Host "If Command Palette doesn't pick it up, run its 'Reload' command."
