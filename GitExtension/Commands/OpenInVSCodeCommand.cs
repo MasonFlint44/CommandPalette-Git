@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using GitExtension.Models;
+using GitExtension.Services;
 using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
 
@@ -14,10 +15,12 @@ namespace GitExtension.Commands;
 internal sealed partial class OpenInVSCodeCommand : InvokableCommand
 {
     private readonly GitRepoInfo _repo;
+    private readonly Launcher _launcher;
 
-    public OpenInVSCodeCommand(GitRepoInfo repo)
+    public OpenInVSCodeCommand(GitRepoInfo repo, Launcher? launcher = null)
     {
         _repo = repo;
+        _launcher = launcher ?? Launcher.Default;
         Name = "Open in VS Code";
         Icon = new IconInfo(""); // Code icon
     }
@@ -28,11 +31,11 @@ internal sealed partial class OpenInVSCodeCommand : InvokableCommand
         {
             // Open through the WSL remote so VS Code runs its server inside the distro.
             // No working directory: code is a .cmd and cmd.exe rejects UNC working directories.
-            ShellHelpers.OpenInShell("code", $"--remote \"wsl+{_repo.Distro}\" \"{_repo.LinuxPath}\"");
+            _launcher.Shell("code", $"--remote \"wsl+{_repo.Distro}\" \"{_repo.LinuxPath}\"");
         }
         else
         {
-            ShellHelpers.OpenInShell("code", $"\"{_repo.FullPath}\"", _repo.FullPath);
+            _launcher.Shell("code", $"\"{_repo.FullPath}\"", _repo.FullPath);
         }
 
         return CommandResult.Dismiss();

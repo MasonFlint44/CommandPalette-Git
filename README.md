@@ -68,6 +68,16 @@ You can change these anytime via the "Change scan paths" item at the bottom of t
 | Copy path | Context menu | Copies full path to clipboard (the Linux path for WSL repos) |
 | Copy Windows path | Context menu (WSL repos only) | Copies the `\\wsl.localhost\...` path |
 
+## Running the tests
+
+The tests need Windows and the .NET 10 SDK (they target .NET 9, which the .NET 10 SDK can build):
+
+```
+dotnet test --project GitExtension.Tests\GitExtension.Tests.csproj -p:Platform=x64
+```
+
+They don't touch your real Windows Terminal settings, extension settings or WSL distros: each test uses its own temporary files and a fixed list of distros, and records command lines instead of launching anything.
+
 ## Known limitations
 
 - **Distro app profiles on Windows repos.** A distro app's profile (e.g. the Ubuntu app's) runs a launcher such as `ubuntu.exe`, which ignores the starting folder, so a Windows repo opened with it lands in the Linux home folder. Choose Terminal's generated profile for the distro (e.g. "Ubuntu (WSL)") instead; it runs `wsl.exe`, which opens `C:\...` folders as `/mnt/c/...`.
