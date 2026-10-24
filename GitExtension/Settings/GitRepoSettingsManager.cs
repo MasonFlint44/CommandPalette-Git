@@ -49,18 +49,18 @@ public sealed class GitRepoSettingsManager : JsonSettingsManager
 
     private static readonly List<ChoiceSetSetting.Choice> DefaultActionChoices =
     [
-        new("Open folder", OpenFolderAction),
-        new("Open in terminal", OpenTerminalAction),
         new("Open in VS Code", OpenVSCodeAction),
+        new("Open in terminal", OpenTerminalAction),
+        new("Open folder", OpenFolderAction),
     ];
 
     private readonly ChoiceSetSetting _defaultAction = new(
         Namespaced("defaultAction"),
         "Default Action",
-        "Action performed when pressing Enter on a repository",
+        "Action performed when pressing Enter on a repository. Ctrl+Enter runs the next of VS Code, terminal and folder; the rest are in the context menu (Ctrl+K)",
         DefaultActionChoices)
     {
-        Value = OpenFolderAction,
+        Value = OpenVSCodeAction,
     };
 
     public const string DefaultTerminalProfile = "default";
@@ -89,7 +89,7 @@ public sealed class GitRepoSettingsManager : JsonSettingsManager
 
     public int MaxDepth => int.TryParse(_maxDepth.Value, out var depth) ? depth : 3;
 
-    public string DefaultAction => _defaultAction.Value ?? OpenFolderAction;
+    public string DefaultAction => _defaultAction.Value ?? OpenVSCodeAction;
 
     public string TerminalProfile => _terminalProfile.Value ?? DefaultTerminalProfile;
 

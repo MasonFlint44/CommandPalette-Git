@@ -15,7 +15,7 @@ public class GitRepoSettingsManagerTests : TestEnvironment
 
         Assert.Equal(string.Empty, settings.ScanPaths);
         Assert.Equal(3, settings.MaxDepth);
-        Assert.Equal(GitRepoSettingsManager.OpenFolderAction, settings.DefaultAction);
+        Assert.Equal(GitRepoSettingsManager.OpenVSCodeAction, settings.DefaultAction);
         Assert.Equal(GitRepoSettingsManager.DefaultTerminalProfile, settings.TerminalProfile);
     }
 

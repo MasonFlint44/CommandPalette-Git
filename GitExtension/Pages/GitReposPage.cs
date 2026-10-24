@@ -225,15 +225,17 @@ internal sealed partial class GitReposPage : DynamicListPage
 
     private ListItem BuildRepoListItem(GitRepoInfo repo)
     {
+        // In order of preference: Command Palette runs the first context menu item on Ctrl+Enter
         (string Action, InvokableCommand Command)[] openCommands =
         [
-            (GitRepoSettingsManager.OpenFolderAction, new OpenFolderCommand(repo)),
-            (GitRepoSettingsManager.OpenTerminalAction, new OpenInTerminalCommand(repo, _settingsManager)),
             (GitRepoSettingsManager.OpenVSCodeAction, new OpenInVSCodeCommand(repo)),
+            (GitRepoSettingsManager.OpenTerminalAction, new OpenInTerminalCommand(repo, _settingsManager)),
+            (GitRepoSettingsManager.OpenFolderAction, new OpenFolderCommand(repo)),
         ];
 
         // The Default Action setting picks what Enter does; the other open actions go in the
-        // context menu. Command Palette already lists the default there, so it isn't repeated.
+        // context menu, the first of them on Ctrl+Enter. Command Palette already lists the
+        // default there, so it isn't repeated.
         var defaultCommand = openCommands.FirstOrDefault(c => c.Action == _settingsManager.DefaultAction).Command
             ?? openCommands[0].Command;
         defaultCommand.Id = RepoCommandId(repo);
