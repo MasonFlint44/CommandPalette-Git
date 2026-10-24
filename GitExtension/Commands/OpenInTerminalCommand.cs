@@ -18,11 +18,13 @@ internal sealed partial class OpenInTerminalCommand : InvokableCommand
 {
     private readonly GitRepoInfo _repo;
     private readonly GitRepoSettingsManager _settingsManager;
+    private readonly Launcher _launcher;
 
-    public OpenInTerminalCommand(GitRepoInfo repo, GitRepoSettingsManager settingsManager)
+    public OpenInTerminalCommand(GitRepoInfo repo, GitRepoSettingsManager settingsManager, Launcher? launcher = null)
     {
         _repo = repo;
         _settingsManager = settingsManager;
+        _launcher = launcher ?? Launcher.Default;
         Name = "Open in terminal";
         Icon = new IconInfo(""); // CommandPrompt icon
     }
@@ -38,13 +40,13 @@ internal sealed partial class OpenInTerminalCommand : InvokableCommand
             // wsl.exe in place of their command line: a distro app's launcher such as ubuntu.exe
             // opens interactive shells in the home folder whatever the starting directory. The
             // profile still provides the look (colours, icon, font, tab title).
-            TerminalLauncher.Launch($"{profileArgument}wsl.exe -d \"{_repo.Distro}\" --cd \"{_repo.LinuxPath}\"");
+            _launcher.Terminal($"{profileArgument}wsl.exe -d \"{_repo.Distro}\" --cd \"{_repo.LinuxPath}\"");
         }
         else
         {
             // The profile keeps its own command line, startup commands included. wsl.exe-based
             // command lines start in the \\wsl.localhost folder's matching Linux path.
-            TerminalLauncher.Launch($"{profileArgument}-d \"{_repo.FullPath}\"");
+            _launcher.Terminal($"{profileArgument}-d \"{_repo.FullPath}\"");
         }
 
         return CommandResult.Dismiss();

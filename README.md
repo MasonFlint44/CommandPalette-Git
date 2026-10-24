@@ -68,6 +68,25 @@ You can change these anytime via the "Change scan paths" item at the bottom of t
 | Copy path | Context menu | Copies full path to clipboard (the Linux path for WSL repos) |
 | Copy Windows path | Context menu (WSL repos only) | Copies the `\\wsl.localhost\...` path |
 
+## Running the tests
+
+The tests need Windows and the .NET 10 SDK (they target .NET 9, which the .NET 10 SDK can build):
+
+```
+dotnet test --project GitExtension.Tests\GitExtension.Tests.csproj -p:Platform=x64
+```
+
+They don't touch your real Windows Terminal settings, extension settings or WSL distros: each test uses its own temporary files and a fixed list of distros, and records command lines instead of launching anything.
+
+`LaunchTests` go further: they open real Windows Terminal, VS Code and Explorer windows against your own Terminal settings and Ubuntu distro, check where each one opened, then close them. They're skipped unless you opt in:
+
+```
+set GITEXTENSION_LAUNCH_TESTS=1
+dotnet test --project GitExtension.Tests\GitExtension.Tests.csproj -p:Platform=x64 --filter-class GitExtension.Tests.LaunchTests
+```
+
+They need an `Ubuntu` WSL distro and VS Code with the WSL extension. Each test works in its own scratch folders and closes only the windows it opened (Terminal is told to use a new window, so your existing tabs aren't affected).
+
 ## Known limitations
 
 - **Distro app profiles on Windows repos.** A distro app's profile (e.g. the Ubuntu app's) runs a launcher such as `ubuntu.exe`, which ignores the starting folder, so a Windows repo opened with it lands in the Linux home folder. Choose Terminal's generated profile for the distro (e.g. "Ubuntu (WSL)") instead; it runs `wsl.exe`, which opens `C:\...` folders as `/mnt/c/...`.

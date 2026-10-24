@@ -138,7 +138,7 @@ public sealed class GitRepoSettingsManager : JsonSettingsManager
 
             try
             {
-                using var stream = File.Create(TerminalProfileChoicesJsonPath());
+                using var stream = File.Create(_terminalProfileChoicesPath);
                 using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true });
                 writer.WriteStartObject();
                 WriteChoices(writer, "repos", _repoTerminalProfiles);
@@ -168,7 +168,7 @@ public sealed class GitRepoSettingsManager : JsonSettingsManager
     {
         try
         {
-            using var document = JsonDocument.Parse(File.ReadAllText(TerminalProfileChoicesJsonPath()));
+            using var document = JsonDocument.Parse(File.ReadAllText(_terminalProfileChoicesPath));
             ReadChoices(document.RootElement, "repos", _repoTerminalProfiles);
             ReadChoices(document.RootElement, "distros", _distroTerminalProfiles);
         }
@@ -208,19 +208,19 @@ public sealed class GitRepoSettingsManager : JsonSettingsManager
         ScanPathsUpdated?.Invoke(this, EventArgs.Empty);
     }
 
-    internal static string SettingsJsonPath()
-    {
-        var directory = Utilities.BaseSettingsPath("Microsoft.CmdPal");
-        Directory.CreateDirectory(directory);
-        return Path.Combine(directory, "GitExtension.settings.json");
-    }
-
-    private static string TerminalProfileChoicesJsonPath() =>
-        Path.Combine(Path.GetDirectoryName(SettingsJsonPath())!, "GitExtension.terminalProfiles.json");
+    private readonly string _terminalProfileChoicesPath;
 
     public GitRepoSettingsManager()
+        : this(Utilities.BaseSettingsPath("Microsoft.CmdPal"))
     {
-        FilePath = SettingsJsonPath();
+    }
+
+    /// <summary>Keeps the settings files in <paramref name="directory"/>; tests use a temporary one.</summary>
+    internal GitRepoSettingsManager(string directory)
+    {
+        Directory.CreateDirectory(directory);
+        FilePath = Path.Combine(directory, "GitExtension.settings.json");
+        _terminalProfileChoicesPath = Path.Combine(directory, "GitExtension.terminalProfiles.json");
 
         Settings.Add(_scanPaths);
         Settings.Add(_maxDepth);

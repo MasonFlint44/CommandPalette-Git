@@ -24,6 +24,7 @@ internal static class WslDistros
     private static readonly Lock CacheLock = new();
     private static List<string>? _names;
     private static DateTime _readAt;
+    private static Func<List<string>> _readNames = ReadRegisteredNames;
 
     /// <summary>The registered distro names.</summary>
     public static IReadOnlyList<string> RegisteredNames()
@@ -55,11 +56,21 @@ internal static class WslDistros
     {
         if (_names is null || (refresh && DateTime.UtcNow - _readAt > RefreshInterval))
         {
-            _names = ReadRegisteredNames();
+            _names = _readNames();
             _readAt = DateTime.UtcNow;
         }
 
         return _names;
+    }
+
+    /// <summary>Replaces the registry lookup, e.g. with a fixed list in tests. Null restores it.</summary>
+    internal static void SetSource(Func<List<string>>? readNames)
+    {
+        lock (CacheLock)
+        {
+            _readNames = readNames ?? ReadRegisteredNames;
+            _names = null;
+        }
     }
 
     private static List<string> ReadRegisteredNames()

@@ -53,7 +53,8 @@ internal static partial class TerminalProfiles
     // Windows Terminal's namespace for the GUIDs of profiles it generates
     private static readonly Guid TerminalProfileNamespace = new("2BDE4A90-D05F-401C-9492-E40884EAD1D8");
 
-    private static string SettingsPath => Path.Combine(
+    // Tests point this at their own settings file
+    internal static string SettingsPath { get; set; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "Packages",
         "Microsoft.WindowsTerminal_8wekyb3d8bbwe",
