@@ -2,7 +2,6 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using GitExtension.Commands;
 using GitExtension.Pages;
 using GitExtension.Settings;
 using Microsoft.CommandPalette.Extensions;
@@ -55,15 +54,23 @@ public class GitReposPageTests : TestEnvironment
         Assert.Equal("Windows", Assert.Single(items[0].Tags).Text);
     }
 
-    [Fact]
-    public void Enter_runs_the_default_action_and_the_menu_has_the_rest()
+    // The first menu item is what Ctrl+Enter runs
+    [Theory]
+    [InlineData(null, "Open in VS Code", "Open in terminal", "Open folder")]
+    [InlineData(GitRepoSettingsManager.OpenVSCodeAction, "Open in VS Code", "Open in terminal", "Open folder")]
+    [InlineData(GitRepoSettingsManager.OpenTerminalAction, "Open in terminal", "Open in VS Code", "Open folder")]
+    [InlineData(GitRepoSettingsManager.OpenFolderAction, "Open folder", "Open in VS Code", "Open in terminal")]
+    public void Enter_runs_the_default_action_and_Ctrl_Enter_the_next(string? defaultAction, string enter, string ctrlEnter, string inMenu)
     {
-        _settings.Settings.Update($$"""{ "gitRepos.defaultAction": "{{GitRepoSettingsManager.OpenTerminalAction}}" }""");
+        if (defaultAction is not null)
+        {
+            _settings.Settings.Update($$"""{ "gitRepos.defaultAction": "{{defaultAction}}" }""");
+        }
 
         var item = Items(new GitReposPage(_settings))[0];
 
-        Assert.IsType<OpenInTerminalCommand>(item.Command);
-        Assert.Equal(["Open folder", "Open in VS Code", "Copy path", "Set terminal profile…", "Settings"], MenuNames(item));
+        Assert.Equal(enter, item.Command.Name);
+        Assert.Equal([ctrlEnter, inMenu, "Copy path", "Set terminal profile…", "Settings"], MenuNames(item));
     }
 
     [Fact]
