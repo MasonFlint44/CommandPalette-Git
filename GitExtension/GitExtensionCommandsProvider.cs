@@ -24,7 +24,7 @@ public partial class GitExtensionCommandsProvider : CommandProvider
     {
         DisplayName = "Browse git repositories";
         Icon = ExtensionIcon;
-        Id = "com.gitextension.repos";
+        Id = "com.masonflint44.gitextension.repos";
         Settings = _settingsManager.Settings;
 
         _reposPage = new GitReposPage(_settingsManager);

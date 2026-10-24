@@ -9,7 +9,7 @@ using Microsoft.CommandPalette.Extensions;
 
 namespace GitExtension;
 
-[Guid("80839ccf-b666-4d90-97c6-c8e2a2325332")]
+[Guid("b516b7e0-81be-4acd-947d-c46d0f3ccd8c")]
 public sealed partial class GitExtension : IExtension, IDisposable
 {
     private readonly ManualResetEvent _extensionDisposedEvent;

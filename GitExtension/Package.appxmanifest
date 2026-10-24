@@ -9,13 +9,13 @@
   IgnorableNamespaces="uap uap3 rescap">
 
   <Identity
-    Name="27078NielsLaute.GitrepositoriesforCommandPalette"
-    Publisher="CN=D821D027-C2F6-4E57-A741-849AE0C48C59"
-    Version="0.0.1.0" />
+    Name="MasonFlint44.CommandPaletteGit"
+    Publisher="CN=MasonFlint44"
+    Version="0.1.0.0" />
 
   <Properties>
-    <DisplayName>Git repositories for Command Palette</DisplayName>
-    <PublisherDisplayName>NielsLaute</PublisherDisplayName>
+    <DisplayName>Git repositories for Command Palette (fork)</DisplayName>
+    <PublisherDisplayName>MasonFlint44</PublisherDisplayName>
     <Logo>Assets\StoreLogo.scale-200.png</Logo>
   </Properties>
 
@@ -33,7 +33,7 @@
       Executable="$targetnametoken$.exe"
       EntryPoint="$targetentrypoint$">
       <uap:VisualElements
-        DisplayName="Git repositories for Command Palette"
+        DisplayName="Git repositories for Command Palette (fork)"
         Description="Discover and access local git repositories from Command Palette"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
@@ -45,7 +45,7 @@
         <com:Extension Category="windows.comServer">
           <com:ComServer>
             <com:ExeServer Executable="GitExtension.exe" Arguments="-RegisterProcessAsComServer" DisplayName="Git Repositories">
-              <com:Class Id="80839ccf-b666-4d90-97c6-c8e2a2325332" DisplayName="Git Repositories" />
+              <com:Class Id="b516b7e0-81be-4acd-947d-c46d0f3ccd8c" DisplayName="Git Repositories" />
             </com:ExeServer>
           </com:ComServer>
         </com:Extension>
@@ -53,12 +53,12 @@
           <uap3:AppExtension Name="com.microsoft.commandpalette"
             Id="ID"
             PublicFolder="Public"
-            DisplayName="Git Repositories"
+            DisplayName="Git Repositories (fork)"
             Description="Discover and access local git repositories from Command Palette">
             <uap3:Properties>
               <CmdPalProvider>
                 <Activation>
-                  <CreateInstance ClassId="80839ccf-b666-4d90-97c6-c8e2a2325332" />
+                  <CreateInstance ClassId="b516b7e0-81be-4acd-947d-c46d0f3ccd8c" />
                 </Activation>
                 <SupportedInterfaces>
                   <Commands/>

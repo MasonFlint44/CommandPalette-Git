@@ -10,18 +10,19 @@
     <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
 
-    <AppxPackageIdentityName>27078NielsLaute.GitrepositoriesforCommandPalette</AppxPackageIdentityName>
-    <AppxPackagePublisher>CN=D821D027-C2F6-4E57-A741-849AE0C48C59</AppxPackagePublisher>
-    <AppxPackageVersion>0.0.1.0</AppxPackageVersion>
+    <AppxPackageIdentityName>MasonFlint44.CommandPaletteGit</AppxPackageIdentityName>
+    <AppxPackagePublisher>CN=MasonFlint44</AppxPackagePublisher>
+    <AppxPackageVersion>0.1.0.0</AppxPackageVersion>
 
     <EnableMsixTooling>true</EnableMsixTooling>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- Copied to the build output too, so a build installed from that folder (scripts\Install-Dev.ps1) has its icons -->
   <ItemGroup>
-    <Content Include="Assets\**\*.png" />
-    <Content Include="Assets\git.light.svg" />
-    <Content Include="Assets\git.dark.svg" />
+    <Content Include="Assets\**\*.png" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\git.light.svg" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\git.dark.svg" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <Target Name="PrepareAssets" BeforeTargets="BeforeBuild">
