@@ -2,6 +2,7 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Text.RegularExpressions;
 using GitExtension.Services;
 
@@ -38,6 +39,12 @@ public sealed partial class GitRepoInfo
     public string? LinuxPath { get; }
 
     public bool IsWsl => Distro is not null;
+
+    /// <summary>
+    /// When git last moved the repository's HEAD (commit, checkout, pull, merge, rebase), or null
+    /// if unknown. Fetches don't count.
+    /// </summary>
+    public DateTimeOffset? LastGitActivity { get; init; }
 
     /// <summary>
     /// Identifies the repository in saved choices: distro and Linux path for WSL, so switching a

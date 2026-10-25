@@ -91,7 +91,7 @@ public class OpenCommandTests : TestEnvironment
     [Fact]
     public void VS_Code_opens_a_Windows_repo_in_its_folder()
     {
-        new OpenInVSCodeCommand(WindowsRepo, _launcher).Invoke();
+        new OpenInVSCodeCommand(WindowsRepo, launcher: _launcher).Invoke();
 
         Assert.Equal(@"code ""C:\code\my foo"" (in C:\code\my foo)", Assert.Single(_launcher.Launches));
     }
@@ -99,7 +99,7 @@ public class OpenCommandTests : TestEnvironment
     [Fact]
     public void VS_Code_opens_a_WSL_repo_through_the_WSL_remote()
     {
-        new OpenInVSCodeCommand(UbuntuRepo, _launcher).Invoke();
+        new OpenInVSCodeCommand(UbuntuRepo, launcher: _launcher).Invoke();
 
         Assert.Equal(@"code --remote ""wsl+Ubuntu"" ""/home/me/my foo""", Assert.Single(_launcher.Launches));
     }
@@ -107,7 +107,7 @@ public class OpenCommandTests : TestEnvironment
     [Fact]
     public void Folder_opens_in_Explorer()
     {
-        new OpenFolderCommand(UbuntuRepo, _launcher).Invoke();
+        new OpenFolderCommand(UbuntuRepo, launcher: _launcher).Invoke();
 
         Assert.Equal(@"explorer.exe \\wsl.localhost\Ubuntu\home\me\my foo", Assert.Single(_launcher.Launches));
     }
@@ -117,5 +117,21 @@ public class OpenCommandTests : TestEnvironment
     {
         Assert.Equal("Copy path", new CopyRepoPathCommand(UbuntuRepo).Name);
         Assert.Equal("Copy Windows path", new CopyRepoPathCommand(UbuntuRepo, windowsPath: true).Name);
+    }
+
+    [Fact]
+    public void Each_open_action_records_a_use()
+    {
+        var settings = NewSettings();
+        var now = DateTimeOffset.UtcNow;
+
+        new OpenInVSCodeCommand(WindowsRepo, settings.History, _launcher).Invoke();
+        Assert.Equal(20, settings.History.Weight(WindowsRepo, now));
+
+        new OpenInTerminalCommand(WindowsRepo, settings, _launcher).Invoke();
+        new OpenFolderCommand(WindowsRepo, settings.History, _launcher).Invoke();
+
+        // Three uses: 10 + 10 * log2(4)
+        Assert.Equal(30, settings.History.Weight(WindowsRepo, now));
     }
 }

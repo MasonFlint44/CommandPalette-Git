@@ -31,6 +31,8 @@ internal sealed partial class OpenInTerminalCommand : InvokableCommand
 
     public override CommandResult Invoke()
     {
+        _settingsManager.History.RecordOpen(_repo);
+
         var profile = TerminalProfiles.Resolve(_repo, _settingsManager, TerminalProfiles.Load());
         var profileArgument = profile is null ? string.Empty : $"-p \"{profile.Id}\" ";
 

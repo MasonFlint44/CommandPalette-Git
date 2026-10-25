@@ -57,6 +57,43 @@ public static class GitRepoScanner
         return Path.GetFullPath(path);
     }
 
+    /// <summary>
+    /// When HEAD's reflog (.git/logs/HEAD) last changed. Git appends to it whenever HEAD moves,
+    /// which background fetches don't do. A worktree's .git is a file pointing at its own git folder.
+    /// </summary>
+    private static DateTimeOffset? LastHeadChange(string dotGit)
+    {
+        try
+        {
+            var gitFolder = dotGit;
+            if (File.Exists(dotGit))
+            {
+                var line = File.ReadLines(dotGit).FirstOrDefault() ?? string.Empty;
+                if (!line.StartsWith("gitdir:", StringComparison.Ordinal))
+                {
+                    return null;
+                }
+
+                var target = line["gitdir:".Length..].Trim();
+                if (target.StartsWith('/') && dotGit.StartsWith(@"\\", StringComparison.Ordinal))
+                {
+                    // A WSL worktree's gitdir is a Linux path: put it under the distro's \\wsl.localhost\<distro>
+                    var share = dotGit.Split('\\', 5);
+                    target = $@"\\{share[2]}\{share[3]}{target.Replace('/', '\\')}";
+                }
+
+                gitFolder = Path.GetFullPath(target, Path.GetDirectoryName(dotGit)!);
+            }
+
+            var reflog = new FileInfo(Path.Combine(gitFolder, "logs", "HEAD"));
+            return reflog.Exists ? new DateTimeOffset(reflog.LastWriteTimeUtc) : null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            return null;
+        }
+    }
+
     private static void ScanDirectory(string directory, int maxDepth, int currentDepth, List<GitRepoInfo> results)
     {
         if (currentDepth > maxDepth)
@@ -70,7 +107,7 @@ public static class GitRepoScanner
             if (Directory.Exists(gitDir) || File.Exists(gitDir))
             {
                 var name = Path.GetFileName(directory) ?? directory;
-                results.Add(new GitRepoInfo(name, directory));
+                results.Add(new GitRepoInfo(name, directory) { LastGitActivity = LastHeadChange(gitDir) });
                 // Don't recurse into a repo's subdirectories (avoids submodules/nested repos)
                 return;
             }
