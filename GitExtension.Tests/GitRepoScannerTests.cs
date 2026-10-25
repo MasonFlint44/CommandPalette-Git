@@ -2,6 +2,8 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Security.AccessControl;
+using System.Security.Principal;
 using GitExtension.Services;
 
 namespace GitExtension.Tests;
@@ -153,5 +155,47 @@ public class GitRepoScannerTests : TestEnvironment
         File.WriteAllText(Path.Combine(worktree, ".git"), $"gitdir: {worktreeGit}\n");
 
         Assert.Equal(new("https://gitlab.com/me/main", "GitLab"), GitRepoScanner.Scan(Root, 3).Single().Remote);
+    }
+
+    [Fact]
+    public void Skips_folders_it_cant_open()
+    {
+        MakeRepo("visible");
+        var locked = new DirectoryInfo(Path.Combine(Root, "locked"));
+        locked.Create();
+        System.IO.Directory.CreateDirectory(Path.Combine(locked.FullName, "hidden-repo", ".git"));
+        var deny = new FileSystemAccessRule(WindowsIdentity.GetCurrent().User!, FileSystemRights.ListDirectory, AccessControlType.Deny);
+        var security = locked.GetAccessControl();
+        security.AddAccessRule(deny);
+        locked.SetAccessControl(security);
+        try
+        {
+            Assert.Equal(["visible"], Names(Root));
+        }
+        finally
+        {
+            security.RemoveAccessRule(deny);
+            locked.SetAccessControl(security);
+        }
+    }
+
+    [Fact]
+    public void Skips_broken_links()
+    {
+        MakeRepo("real");
+        System.IO.Directory.CreateSymbolicLink(Path.Combine(Root, "dangling"), Path.Combine(Directory, "deleted-target"));
+
+        Assert.Equal(["real"], Names(Root));
+    }
+
+    [Fact]
+    public void Follows_links_to_folders()
+    {
+        var elsewhere = Path.Combine(Directory, "elsewhere", "linked-repo");
+        System.IO.Directory.CreateDirectory(Path.Combine(elsewhere, ".git"));
+        System.IO.Directory.CreateDirectory(Root);
+        System.IO.Directory.CreateSymbolicLink(Path.Combine(Root, "link"), Path.GetDirectoryName(elsewhere)!);
+
+        Assert.Equal(["linked-repo"], Names(Root));
     }
 }
