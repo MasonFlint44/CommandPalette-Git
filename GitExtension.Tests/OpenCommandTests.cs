@@ -154,4 +154,17 @@ public class OpenCommandTests : TestEnvironment
     {
         Assert.Equal("Open remote in browser", new OpenRemoteCommand(new("https://git.local/me/foo", null)).Name);
     }
+
+    [Fact]
+    public void Copy_path_copies_the_Linux_path_of_a_WSL_repo()
+    {
+        Assert.Equal("/home/me/my foo", new CopyRepoPathCommand(UbuntuRepo).Text);
+        Assert.Equal(@"\\wsl.localhost\Ubuntu\home\me\my foo", new CopyRepoPathCommand(UbuntuRepo, windowsPath: true).Text);
+    }
+
+    [Fact]
+    public void Copy_path_copies_a_Windows_repos_path()
+    {
+        Assert.Equal(@"C:\code\my foo", new CopyRepoPathCommand(WindowsRepo).Text);
+    }
 }

@@ -44,6 +44,10 @@ internal sealed partial class GitReposPage : DynamicListPage
     private int _isScanning;
     private Task _initialScan = Task.CompletedTask;
 
+    // Makes a background scan's "are these results still current?" check and its update of
+    // _repos one step with respect to a settings change's rescan
+    private readonly Lock _reposLock = new();
+
     // Cache of command items for dock pinning lookup
     private readonly Dictionary<string, ICommandItem> _commandItemCache = [];
 
@@ -71,8 +75,12 @@ internal sealed partial class GitReposPage : DynamicListPage
     private void OnSettingsChanged(object? sender, Microsoft.CommandPalette.Extensions.Toolkit.Settings settingsArgs)
     {
         // Cached items were built with the old settings (e.g. Default Action), including pinned ones
-        _commandItemCache.Clear();
-        RefreshRepos();
+        lock (_reposLock)
+        {
+            _commandItemCache.Clear();
+            RefreshRepos();
+        }
+
         RaiseItemsChanged();
     }
 
@@ -105,13 +113,30 @@ internal sealed partial class GitReposPage : DynamicListPage
         {
             try
             {
-                var newRepos = GitRepoScanner.Scan(_settingsManager.ScanPaths, _settingsManager.MaxDepth);
-                // Git activity feeds the ordering and the remote the menu, so changes to either count
-                var changed = !_repos.Select(r => (r.FullPath, r.LastGitActivity, r.Remote))
-                    .SequenceEqual(newRepos.Select(r => (r.FullPath, r.LastGitActivity, r.Remote)));
+                var (scanPaths, maxDepth) = (_settingsManager.ScanPaths, _settingsManager.MaxDepth);
+                var newRepos = GitRepoScanner.Scan(scanPaths, maxDepth);
+
+                bool changed;
+                lock (_reposLock)
+                {
+                    // The scan paths or depth changed while scanning: the settings change has
+                    // already listed the new repos, and these are the old folder's
+                    if (scanPaths != _settingsManager.ScanPaths || maxDepth != _settingsManager.MaxDepth)
+                    {
+                        return;
+                    }
+
+                    // Git activity feeds the ordering and the remote the menu, so changes to either count
+                    changed = !_repos.Select(r => (r.FullPath, r.LastGitActivity, r.Remote))
+                        .SequenceEqual(newRepos.Select(r => (r.FullPath, r.LastGitActivity, r.Remote)));
+                    if (changed)
+                    {
+                        _repos = newRepos;
+                    }
+                }
+
                 if (changed)
                 {
-                    _repos = newRepos;
                     RaiseItemsChanged();
                 }
             }

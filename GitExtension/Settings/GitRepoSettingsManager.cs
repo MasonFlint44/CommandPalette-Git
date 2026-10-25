@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading;
 using GitExtension.Services;
 using Microsoft.CommandPalette.Extensions.Toolkit;
@@ -204,9 +205,8 @@ public sealed class GitRepoSettingsManager : JsonSettingsManager
 
     public void UpdateScanPaths(string paths)
     {
-        var key = Namespaced("scanPaths");
-        var json = $"{{\"{key}\":\"{paths.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"}}";
-        Settings.Update(json);
+        // Serialized rather than built by hand so any character in the paths is escaped
+        Settings.Update(new JsonObject { [Namespaced("scanPaths")] = paths }.ToJsonString());
         SaveSettings();
         ScanPathsUpdated?.Invoke(this, EventArgs.Empty);
     }

@@ -23,6 +23,9 @@ internal sealed partial class CopyRepoPathCommand : InvokableCommand
         Icon = new IconInfo(""); // Copy icon
     }
 
+    /// <summary>The text it copies.</summary>
+    internal string Text => _path;
+
     public override CommandResult Invoke()
     {
         ClipboardHelper.SetText(_path);

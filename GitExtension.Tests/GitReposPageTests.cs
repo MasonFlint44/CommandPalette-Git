@@ -134,4 +134,64 @@ public class GitReposPageTests : TestEnvironment
         Assert.Equal(["Open in terminal", "Open folder", "Open on GitHub", "Copy path"], MenuNames(items[0]).Take(4));
         Assert.DoesNotContain("Open on GitHub", MenuNames(items[1]));
     }
+
+    // As Command Palette does when you save its settings page for the extension
+    private void SaveSettingsPage(string json)
+    {
+        var form = (IFormContent)((ContentPage)_settings.Settings.SettingsPage).GetContent().Single();
+        form.SubmitForm(json, string.Empty);
+    }
+
+    [Fact]
+    public void Changing_the_default_action_rebuilds_items_and_pinned_ones()
+    {
+        var page = new GitReposPage(_settings);
+        Assert.Equal("Open in VS Code", Items(page)[0].Command.Name);
+        Assert.Equal("Open in VS Code", page.GetCommandItemById($"repo.{_alpha}")!.Command.Name);
+
+        SaveSettingsPage($$"""{ "gitRepos.defaultAction": "{{GitRepoSettingsManager.OpenTerminalAction}}" }""");
+
+        // Pinned items are resolved without the page being shown, so check them first
+        Assert.Equal("Open in terminal", page.GetCommandItemById($"repo.{_alpha}")!.Command.Name);
+        Assert.Equal("Open in terminal", page.GetItems()[0].Command.Name);
+    }
+
+    [Fact]
+    public void Changing_scan_paths_lists_the_new_folders_repos()
+    {
+        var other = Path.Combine(Directory, "other");
+        System.IO.Directory.CreateDirectory(Path.Combine(other, "gamma", ".git"));
+        var page = new GitReposPage(_settings);
+        Items(page);
+
+        _settings.UpdateScanPaths(other);
+
+        Assert.Equal(["gamma"], page.GetItems().Select(i => i.Title));
+        Assert.Null(page.GetCommandItemById($"repo.{_alpha}"));
+    }
+
+    [Fact]
+    public void A_rescan_picks_up_added_and_removed_repos()
+    {
+        var page = new GitReposPage(_settings);
+        Assert.Equal(["alpha", "beta"], Items(page).Select(i => i.Title));
+        var changed = new ManualResetEventSlim();
+        page.ItemsChanged += (s, e) => changed.Set();
+
+        System.IO.Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(_alpha)!, "gamma", ".git"));
+        System.IO.Directory.Delete(_alpha, recursive: true);
+
+        // Showing the page starts a background rescan unless one is already running (which may
+        // have read the folder before the change), so keep showing it until the change is reported
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        do
+        {
+            page.GetItems();
+        }
+        while (!changed.Wait(TimeSpan.FromMilliseconds(100), TestContext.Current.CancellationToken) && DateTime.UtcNow < deadline);
+
+        Assert.True(changed.IsSet);
+
+        Assert.Equal(["beta", "gamma"], page.GetItems().Select(i => i.Title));
+    }
 }

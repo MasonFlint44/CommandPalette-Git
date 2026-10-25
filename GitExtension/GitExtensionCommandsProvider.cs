@@ -15,13 +15,20 @@ public partial class GitExtensionCommandsProvider : CommandProvider
     private static readonly IconInfo ExtensionIcon =
         IconHelpers.FromRelativePath("Assets\\StoreLogo.scale-200.png");
 
-    private readonly GitRepoSettingsManager _settingsManager = new();
+    private readonly GitRepoSettingsManager _settingsManager;
     private readonly GitReposPage _reposPage;
     private readonly SetupPage _setupPage;
     private ICommandItem[] _commands;
 
     public GitExtensionCommandsProvider()
+        : this(new GitRepoSettingsManager())
     {
+    }
+
+    /// <summary>Uses the given settings; tests pass ones kept in a temporary folder.</summary>
+    internal GitExtensionCommandsProvider(GitRepoSettingsManager settingsManager)
+    {
+        _settingsManager = settingsManager;
         DisplayName = "Browse git repositories";
         Icon = ExtensionIcon;
         Id = "com.masonflint44.gitextension.repos";
