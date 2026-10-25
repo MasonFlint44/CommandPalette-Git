@@ -127,4 +127,31 @@ public class GitRepoScannerTests : TestEnvironment
 
         Assert.Equal(new DateTimeOffset(written), GitRepoScanner.Scan(Root, 3).Single().LastGitActivity);
     }
+
+    [Fact]
+    public void Reads_the_remotes_web_page()
+    {
+        File.WriteAllText(Path.Combine(MakeRepo("hosted"), ".git", "config"), "[remote \"origin\"]\n\turl = git@github.com:me/hosted.git\n");
+        MakeRepo("local");
+
+        var repos = GitRepoScanner.Scan(Root, 3);
+
+        Assert.Equal("https://github.com/me/hosted", repos.Single(r => r.Name == "hosted").Remote?.Url);
+        Assert.Null(repos.Single(r => r.Name == "local").Remote);
+    }
+
+    [Fact]
+    public void Reads_a_worktrees_remote_from_the_main_repo()
+    {
+        var mainGit = Path.Combine(Directory, "main", ".git");
+        var worktreeGit = Path.Combine(mainGit, "worktrees", "feature");
+        System.IO.Directory.CreateDirectory(worktreeGit);
+        File.WriteAllText(Path.Combine(mainGit, "config"), "[remote \"origin\"]\n\turl = https://gitlab.com/me/main.git\n");
+        File.WriteAllText(Path.Combine(worktreeGit, "commondir"), "../..\n");
+        var worktree = Path.Combine(Root, "feature");
+        System.IO.Directory.CreateDirectory(worktree);
+        File.WriteAllText(Path.Combine(worktree, ".git"), $"gitdir: {worktreeGit}\n");
+
+        Assert.Equal(new("https://gitlab.com/me/main", "GitLab"), GitRepoScanner.Scan(Root, 3).Single().Remote);
+    }
 }

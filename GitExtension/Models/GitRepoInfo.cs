@@ -46,6 +46,9 @@ public sealed partial class GitRepoInfo
     /// </summary>
     public DateTimeOffset? LastGitActivity { get; init; }
 
+    /// <summary>The web page of the repository's origin remote (or its first remote), or null if it has none.</summary>
+    public RemotePage? Remote { get; init; }
+
     /// <summary>
     /// Identifies the repository in saved choices: distro and Linux path for WSL, so switching a
     /// scan path between \\wsl$ and \\wsl.localhost (or its case) doesn't lose them.

@@ -134,4 +134,24 @@ public class OpenCommandTests : TestEnvironment
         // Three uses: 10 + 10 * log2(4)
         Assert.Equal(30, settings.History.Weight(WindowsRepo, now));
     }
+
+    [Fact]
+    public void Remote_opens_in_the_browser_without_counting_as_a_use()
+    {
+        var settings = NewSettings();
+        var page = new RemotePage("https://github.com/me/foo", "GitHub");
+
+        var command = new OpenRemoteCommand(page, _launcher);
+        command.Invoke();
+
+        Assert.Equal("Open on GitHub", command.Name);
+        Assert.Equal("browser https://github.com/me/foo", Assert.Single(_launcher.Launches));
+        Assert.Equal(0, settings.History.Weight(WindowsRepo, DateTimeOffset.UtcNow));
+    }
+
+    [Fact]
+    public void Remote_on_another_host_is_named_generically()
+    {
+        Assert.Equal("Open remote in browser", new OpenRemoteCommand(new("https://git.local/me/foo", null)).Name);
+    }
 }

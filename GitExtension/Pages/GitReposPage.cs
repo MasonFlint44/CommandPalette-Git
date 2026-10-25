@@ -106,9 +106,9 @@ internal sealed partial class GitReposPage : DynamicListPage
             try
             {
                 var newRepos = GitRepoScanner.Scan(_settingsManager.ScanPaths, _settingsManager.MaxDepth);
-                // Git activity feeds the ordering, so a commit since the last scan counts as a change
-                var changed = !_repos.Select(r => (r.FullPath, r.LastGitActivity))
-                    .SequenceEqual(newRepos.Select(r => (r.FullPath, r.LastGitActivity)));
+                // Git activity feeds the ordering and the remote the menu, so changes to either count
+                var changed = !_repos.Select(r => (r.FullPath, r.LastGitActivity, r.Remote))
+                    .SequenceEqual(newRepos.Select(r => (r.FullPath, r.LastGitActivity, r.Remote)));
                 if (changed)
                 {
                     _repos = newRepos;
@@ -248,8 +248,13 @@ internal sealed partial class GitReposPage : DynamicListPage
         List<IContextItem> moreCommands =
         [
             .. openCommands.Where(c => c.Command != defaultCommand).Select(c => new CommandContextItem(c.Command)),
-            new CommandContextItem(new CopyRepoPathCommand(repo)),
         ];
+        if (repo.Remote is not null)
+        {
+            moreCommands.Add(new CommandContextItem(new OpenRemoteCommand(repo.Remote)));
+        }
+
+        moreCommands.Add(new CommandContextItem(new CopyRepoPathCommand(repo)));
         if (repo.IsWsl)
         {
             moreCommands.Add(new CommandContextItem(new CopyRepoPathCommand(repo, windowsPath: true)));
