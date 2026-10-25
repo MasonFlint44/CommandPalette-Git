@@ -59,6 +59,8 @@ internal sealed class RecordingLauncher : Launcher
 
     public override void Shell(string program, string arguments, string? workingDirectory = null) =>
         Launches.Add(workingDirectory is null ? $"{program} {arguments}" : $"{program} {arguments} (in {workingDirectory})");
+
+    public override void Browser(string url) => Launches.Add($"browser {url}");
 }
 
 /// <summary>Windows Terminal profile entries for settings.json.</summary>

@@ -20,4 +20,7 @@ internal class Launcher
     /// <summary>Starts a program the way the shell would, e.g. code or explorer.exe.</summary>
     public virtual void Shell(string program, string arguments, string? workingDirectory = null) =>
         ShellHelpers.OpenInShell(program, arguments, workingDirectory);
+
+    /// <summary>Opens a web page in the default browser.</summary>
+    public virtual void Browser(string url) => ShellHelpers.OpenInShell(url);
 }

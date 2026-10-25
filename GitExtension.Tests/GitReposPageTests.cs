@@ -123,4 +123,15 @@ public class GitReposPageTests : TestEnvironment
 
         Assert.Equal(["beta", "alpha"], page.GetItems().Select(i => i.Title));
     }
+
+    [Fact]
+    public void Repos_with_a_remote_can_open_it_after_the_open_actions()
+    {
+        File.WriteAllText(Path.Combine(_alpha, ".git", "config"), "[remote \"origin\"]\n\turl = https://github.com/me/alpha.git\n");
+
+        var items = Items(new GitReposPage(_settings));
+
+        Assert.Equal(["Open in terminal", "Open folder", "Open on GitHub", "Copy path"], MenuNames(items[0]).Take(4));
+        Assert.DoesNotContain("Open on GitHub", MenuNames(items[1]));
+    }
 }

@@ -58,37 +58,74 @@ public static class GitRepoScanner
     }
 
     /// <summary>
-    /// When HEAD's reflog (.git/logs/HEAD) last changed. Git appends to it whenever HEAD moves,
-    /// which background fetches don't do. A worktree's .git is a file pointing at its own git folder.
+    /// The repository's git folder: <paramref name="dotGit"/> itself, or for a worktree the
+    /// folder its .git file points at. Null if that can't be read.
     /// </summary>
-    private static DateTimeOffset? LastHeadChange(string dotGit)
+    private static string? GitFolder(string dotGit)
     {
         try
         {
-            var gitFolder = dotGit;
-            if (File.Exists(dotGit))
+            if (!File.Exists(dotGit))
             {
-                var line = File.ReadLines(dotGit).FirstOrDefault() ?? string.Empty;
-                if (!line.StartsWith("gitdir:", StringComparison.Ordinal))
-                {
-                    return null;
-                }
-
-                var target = line["gitdir:".Length..].Trim();
-                if (target.StartsWith('/') && dotGit.StartsWith(@"\\", StringComparison.Ordinal))
-                {
-                    // A WSL worktree's gitdir is a Linux path: put it under the distro's \\wsl.localhost\<distro>
-                    var share = dotGit.Split('\\', 5);
-                    target = $@"\\{share[2]}\{share[3]}{target.Replace('/', '\\')}";
-                }
-
-                gitFolder = Path.GetFullPath(target, Path.GetDirectoryName(dotGit)!);
+                return dotGit;
             }
 
+            var line = File.ReadLines(dotGit).FirstOrDefault() ?? string.Empty;
+            if (!line.StartsWith("gitdir:", StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            var target = line["gitdir:".Length..].Trim();
+            if (target.StartsWith('/') && dotGit.StartsWith(@"\\", StringComparison.Ordinal))
+            {
+                // A WSL worktree's gitdir is a Linux path: put it under the distro's \\wsl.localhost\<distro>
+                var share = dotGit.Split('\\', 5);
+                target = $@"\\{share[2]}\{share[3]}{target.Replace('/', '\\')}";
+            }
+
+            return Path.GetFullPath(target, Path.GetDirectoryName(dotGit)!);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// When HEAD's reflog (logs/HEAD in the git folder) last changed. Git appends to it whenever
+    /// HEAD moves, which background fetches don't do.
+    /// </summary>
+    private static DateTimeOffset? LastHeadChange(string gitFolder)
+    {
+        try
+        {
             var reflog = new FileInfo(Path.Combine(gitFolder, "logs", "HEAD"));
             return reflog.Exists ? new DateTimeOffset(reflog.LastWriteTimeUtc) : null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// The web page of the repository's origin remote (or its first remote), from its config.
+    /// A worktree's config is in the main repository's git folder, named in its commondir file.
+    /// </summary>
+    private static RemotePage? ReadRemotePage(string gitFolder)
+    {
+        try
+        {
+            var commonDir = Path.Combine(gitFolder, "commondir");
+            var configFolder = File.Exists(commonDir)
+                ? Path.GetFullPath(File.ReadLines(commonDir).First().Trim(), gitFolder)
+                : gitFolder;
+
+            var remote = GitRemotes.PreferredRemoteUrl(File.ReadAllText(Path.Combine(configFolder, "config")));
+            return remote is null ? null : GitRemotes.WebPage(remote);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or InvalidOperationException)
         {
             return null;
         }
@@ -107,7 +144,12 @@ public static class GitRepoScanner
             if (Directory.Exists(gitDir) || File.Exists(gitDir))
             {
                 var name = Path.GetFileName(directory) ?? directory;
-                results.Add(new GitRepoInfo(name, directory) { LastGitActivity = LastHeadChange(gitDir) });
+                var gitFolder = GitFolder(gitDir);
+                results.Add(new GitRepoInfo(name, directory)
+                {
+                    LastGitActivity = gitFolder is null ? null : LastHeadChange(gitFolder),
+                    Remote = gitFolder is null ? null : ReadRemotePage(gitFolder),
+                });
                 // Don't recurse into a repo's subdirectories (avoids submodules/nested repos)
                 return;
             }

@@ -11,6 +11,7 @@ A [Command Palette](https://learn.microsoft.com/windows/powertoys/command-palett
 - **Open in VS Code** — `Enter` opens the repository in VS Code
 - **Open in Terminal** — `Ctrl+Enter` opens Windows Terminal at the repo directory
 - **Open in Explorer** — Opens the repo folder in Windows Explorer, from the context menu
+- **Open on GitHub** — Opens the repo's remote (GitHub, GitLab, Bitbucket, Azure DevOps or any other host) in the browser
 - **Terminal profiles** — Pick the Windows Terminal profile repos open with: globally, per WSL distro, or per repo
 - **Copy path** — Copy the full repository path to your clipboard
 - **WSL repositories** — Repos under `\\wsl.localhost\<distro>\` open in VS Code's WSL mode and in a WSL shell, and show their Linux path
@@ -61,6 +62,7 @@ You can change these anytime via the "Change scan paths" item at the bottom of t
 | Open in VS Code | `Enter` (default; see **Default action**) | Runs `code <path>`, or `code --remote wsl+<distro> <linux path>` for WSL repos |
 | Open in terminal | `Ctrl+Enter` (default) | Opens Windows Terminal with the repo's profile (`-p <profile> -d <path>`), so the profile's command line, including any startup command, runs in the repo folder. For WSL repos using a profile that only launches the distro (Terminal's generated profile or a distro app's), runs `wsl.exe -d <distro> --cd <linux path>` with that profile's look instead, since launchers like `ubuntu.exe` start in the home folder. Falls back to `wt.exe` if Terminal isn't a Store install |
 | Open folder | Context menu | Opens in Windows Explorer |
+| Open on GitHub | Context menu (repos with a remote) | Opens the `origin` remote's page (or the first remote's) in the browser. Named for the host: GitHub, GitLab, Bitbucket or Azure DevOps, otherwise "Open remote in browser". SSH remotes open their web page; user names and tokens in the remote are left out |
 | Set terminal profile… | Context menu | Chooses the Windows Terminal profile this repo opens with |
 | Set terminal profile for all &lt;distro&gt; repos… | Context menu (WSL repos only) | Chooses the profile every repo in that distro opens with; repos with their own choice keep it |
 | Copy path | Context menu | Copies full path to clipboard (the Linux path for WSL repos) |
@@ -98,6 +100,7 @@ They need an `Ubuntu` WSL distro and VS Code with the WSL extension. Each test w
 
 - **Distro app profiles on Windows repos.** A distro app's profile (e.g. the Ubuntu app's) runs a launcher such as `ubuntu.exe`, which ignores the starting folder, so a Windows repo opened with it lands in the Linux home folder. Choose Terminal's generated profile for the distro (e.g. "Ubuntu (WSL)") instead; it runs `wsl.exe`, which opens `C:\...` folders as `/mnt/c/...`.
 - **Command Prompt profiles on WSL repos.** cmd.exe can't use a `\\wsl.localhost` folder as its starting directory and starts in `C:\Windows` instead.
+- **SSH host aliases.** A remote using a host alias from `~/.ssh/config` (e.g. `git@github-work:owner/repo`) opens at the alias, which isn't a real web address.
 - **Windows opening behind the palette.** Command Palette versions bundled before PowerToys 0.101 only let an extension bring windows to the front when you first open its page, and typing a search cancels that, so VS Code and other apps can open behind other windows. Update PowerToys to fix it.
 
 ## Contributing
