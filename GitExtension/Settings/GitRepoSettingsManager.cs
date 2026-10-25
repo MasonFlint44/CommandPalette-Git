@@ -93,6 +93,9 @@ public sealed class GitRepoSettingsManager : JsonSettingsManager
 
     public string TerminalProfile => _terminalProfile.Value ?? DefaultTerminalProfile;
 
+    /// <summary>How often and how recently each repository was opened, for ordering the list.</summary>
+    internal RepoHistory History { get; }
+
     public string? GetRepoTerminalProfile(string repoKey)
     {
         lock (_terminalProfileChoicesLock)
@@ -221,6 +224,7 @@ public sealed class GitRepoSettingsManager : JsonSettingsManager
         Directory.CreateDirectory(directory);
         FilePath = Path.Combine(directory, "GitExtension.settings.json");
         _terminalProfileChoicesPath = Path.Combine(directory, "GitExtension.terminalProfiles.json");
+        History = new RepoHistory(Path.Combine(directory, "GitExtension.history.json"));
 
         Settings.Add(_scanPaths);
         Settings.Add(_maxDepth);

@@ -93,4 +93,38 @@ public class GitRepoScannerTests : TestEnvironment
             Environment.SetEnvironmentVariable("GITEXTENSION_TEST_ROOT", null);
         }
     }
+
+    private static void WriteReflog(string gitFolder, DateTime writtenUtc)
+    {
+        var reflog = Path.Combine(gitFolder, "logs", "HEAD");
+        System.IO.Directory.CreateDirectory(Path.GetDirectoryName(reflog)!);
+        File.WriteAllText(reflog, "0000 1111 Me <me@example.com> 0 +0000\tcommit: x\n");
+        File.SetLastWriteTimeUtc(reflog, writtenUtc);
+    }
+
+    [Fact]
+    public void Reads_git_activity_from_the_HEAD_reflog()
+    {
+        var written = new DateTime(2026, 10, 20, 8, 30, 0, DateTimeKind.Utc);
+        WriteReflog(Path.Combine(MakeRepo("active"), ".git"), written);
+        MakeRepo("fresh");
+
+        var repos = GitRepoScanner.Scan(Root, 3);
+
+        Assert.Equal(new DateTimeOffset(written), repos.Single(r => r.Name == "active").LastGitActivity);
+        Assert.Null(repos.Single(r => r.Name == "fresh").LastGitActivity);
+    }
+
+    [Fact]
+    public void Reads_a_worktrees_activity_from_its_own_git_folder()
+    {
+        var written = new DateTime(2026, 10, 21, 9, 0, 0, DateTimeKind.Utc);
+        var worktreeGit = Path.Combine(Directory, "main", ".git", "worktrees", "feature");
+        WriteReflog(worktreeGit, written);
+        var worktree = Path.Combine(Root, "feature");
+        System.IO.Directory.CreateDirectory(worktree);
+        File.WriteAllText(Path.Combine(worktree, ".git"), $"gitdir: {worktreeGit}\n");
+
+        Assert.Equal(new DateTimeOffset(written), GitRepoScanner.Scan(Root, 3).Single().LastGitActivity);
+    }
 }

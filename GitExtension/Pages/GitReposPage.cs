@@ -60,6 +60,9 @@ internal sealed partial class GitReposPage : DynamicListPage
         _settingsManager.Settings.SettingsChanged += OnSettingsChanged;
         _settingsManager.ScanPathsUpdated += (s, e) => OnSettingsChanged(s, _settingsManager.Settings);
 
+        // Re-sort once an open is recorded, so the repo moves up next time the list is shown
+        _settingsManager.History.Changed += (s, e) => RaiseItemsChanged();
+
         // Scan in the background so a stopped WSL distro (which has to boot when its
         // \\wsl.localhost path is first touched) doesn't hold up loading the extension.
         _initialScan = RefreshReposInBackground();
@@ -103,7 +106,9 @@ internal sealed partial class GitReposPage : DynamicListPage
             try
             {
                 var newRepos = GitRepoScanner.Scan(_settingsManager.ScanPaths, _settingsManager.MaxDepth);
-                var changed = !_repos.Select(r => r.FullPath).SequenceEqual(newRepos.Select(r => r.FullPath));
+                // Git activity feeds the ordering, so a commit since the last scan counts as a change
+                var changed = !_repos.Select(r => (r.FullPath, r.LastGitActivity))
+                    .SequenceEqual(newRepos.Select(r => (r.FullPath, r.LastGitActivity)));
                 if (changed)
                 {
                     _repos = newRepos;
@@ -228,9 +233,9 @@ internal sealed partial class GitReposPage : DynamicListPage
         // In order of preference: Command Palette runs the first context menu item on Ctrl+Enter
         (string Action, InvokableCommand Command)[] openCommands =
         [
-            (GitRepoSettingsManager.OpenVSCodeAction, new OpenInVSCodeCommand(repo)),
+            (GitRepoSettingsManager.OpenVSCodeAction, new OpenInVSCodeCommand(repo, _settingsManager.History)),
             (GitRepoSettingsManager.OpenTerminalAction, new OpenInTerminalCommand(repo, _settingsManager)),
-            (GitRepoSettingsManager.OpenFolderAction, new OpenFolderCommand(repo)),
+            (GitRepoSettingsManager.OpenFolderAction, new OpenFolderCommand(repo, _settingsManager.History)),
         ];
 
         // The Default Action setting picks what Enter does; the other open actions go in the
@@ -268,19 +273,6 @@ internal sealed partial class GitReposPage : DynamicListPage
         };
     }
 
-    private List<GitRepoInfo> FilterRepos()
-    {
-        var search = SearchText;
-        if (string.IsNullOrWhiteSpace(search))
-        {
-            return _repos;
-        }
-
-        return _repos
-            .Where(r =>
-                r.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                r.DisplayPath.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                LocationLabel(r).Contains(search, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-    }
+    private List<GitRepoInfo> FilterRepos() =>
+        RepoRanker.Rank(_repos, SearchText, _settingsManager.History, LocationLabel, DateTimeOffset.UtcNow);
 }

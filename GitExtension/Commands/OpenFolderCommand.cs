@@ -15,11 +15,13 @@ namespace GitExtension.Commands;
 internal sealed partial class OpenFolderCommand : InvokableCommand
 {
     private readonly GitRepoInfo _repo;
+    private readonly RepoHistory? _history;
     private readonly Launcher _launcher;
 
-    public OpenFolderCommand(GitRepoInfo repo, Launcher? launcher = null)
+    public OpenFolderCommand(GitRepoInfo repo, RepoHistory? history = null, Launcher? launcher = null)
     {
         _repo = repo;
+        _history = history;
         _launcher = launcher ?? Launcher.Default;
         Name = "Open folder";
         Icon = new IconInfo("\uE838"); // FolderOpen icon
@@ -27,6 +29,8 @@ internal sealed partial class OpenFolderCommand : InvokableCommand
 
     public override CommandResult Invoke()
     {
+        _history?.RecordOpen(_repo);
+
         _launcher.Shell("explorer.exe", _repo.FullPath);
 
         return CommandResult.Dismiss();

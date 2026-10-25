@@ -15,11 +15,13 @@ namespace GitExtension.Commands;
 internal sealed partial class OpenInVSCodeCommand : InvokableCommand
 {
     private readonly GitRepoInfo _repo;
+    private readonly RepoHistory? _history;
     private readonly Launcher _launcher;
 
-    public OpenInVSCodeCommand(GitRepoInfo repo, Launcher? launcher = null)
+    public OpenInVSCodeCommand(GitRepoInfo repo, RepoHistory? history = null, Launcher? launcher = null)
     {
         _repo = repo;
+        _history = history;
         _launcher = launcher ?? Launcher.Default;
         Name = "Open in VS Code";
         Icon = new IconInfo(""); // Code icon
@@ -27,6 +29,8 @@ internal sealed partial class OpenInVSCodeCommand : InvokableCommand
 
     public override CommandResult Invoke()
     {
+        _history?.RecordOpen(_repo);
+
         if (_repo.IsWsl)
         {
             // Open through the WSL remote so VS Code runs its server inside the distro.

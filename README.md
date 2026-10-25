@@ -15,7 +15,7 @@ A [Command Palette](https://learn.microsoft.com/windows/powertoys/command-palett
 - **Copy path** — Copy the full repository path to your clipboard
 - **WSL repositories** — Repos under `\\wsl.localhost\<distro>\` open in VS Code's WSL mode and in a WSL shell, and show their Linux path
 - **Location labels** — Each repo is tagged "Windows" or with its WSL distro name
-- **Search & filter** — Real-time filtering by repo name or path
+- **Search & ranking** — Fuzzy search by name, path or location, with the repos you use most at the top (see [How repos are ordered](#how-repos-are-ordered))
 - **Dock pinning** — Pin your favorite repos to the Command Palette Dock for instant access
 - **Theme-aware icons** — Git icons that adapt to light and dark themes
 - **Inline setup** — Configure scan paths directly from the extension, no need to dig into settings
@@ -65,6 +65,15 @@ You can change these anytime via the "Change scan paths" item at the bottom of t
 | Set terminal profile for all &lt;distro&gt; repos… | Context menu (WSL repos only) | Chooses the profile every repo in that distro opens with; repos with their own choice keep it |
 | Copy path | Context menu | Copies full path to clipboard (the Linux path for WSL repos) |
 | Copy Windows path | Context menu (WSL repos only) | Copies the `\\wsl.localhost\...` path |
+
+## How repos are ordered
+
+The list follows Command Palette's own ranking, so repos you use rise to the top:
+
+- **Without a search**, the most used and most recently used repos come first, then the rest alphabetically. Opening a repo in VS Code, a terminal or Explorer counts as a use; copying its path doesn't. A repo's last git activity (commit, checkout, pull, merge or rebase, from `.git/logs/HEAD`) counts towards how recently it was used, but not towards how often, so repos you work on outside the palette rise too.
+- **With a search**, how the name matches comes first: an exact name, then names starting with the search, then a word in the name starting with it or its initials (`cpg` for `CommandPalette-Git`), then any fuzzy match of the name, path or location. Within each of those, better matches and more used repos come first.
+
+Usage is kept in `GitExtension.history.json` next to the extension's settings.
 
 ## Running the tests
 

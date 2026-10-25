@@ -2,6 +2,7 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using GitExtension.Models;
 using GitExtension.Pages;
 using GitExtension.Settings;
 using Microsoft.CommandPalette.Extensions;
@@ -110,5 +111,16 @@ public class GitReposPageTests : TestEnvironment
         var items = Items(new GitReposPage(_settings));
 
         Assert.Equal(["No git repositories found", "Change scan paths"], items.Select(i => i.Title));
+    }
+
+    [Fact]
+    public void Opened_repos_move_to_the_top()
+    {
+        var page = new GitReposPage(_settings);
+        Assert.Equal(["alpha", "beta"], Items(page).Select(i => i.Title));
+
+        _settings.History.RecordOpen(new GitRepoInfo("beta", Path.Combine(Path.GetDirectoryName(_alpha)!, "beta")));
+
+        Assert.Equal(["beta", "alpha"], page.GetItems().Select(i => i.Title));
     }
 }

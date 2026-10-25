@@ -66,6 +66,8 @@
     <PackageReference Include="Microsoft.CommandPalette.Extensions" />
     <PackageReference Include="Microsoft.Windows.CsWinRT" />
     <PackageReference Include="Shmuelie.WinRTServer" />
+    <!-- The toolkit's FuzzyStringMatcher needs it, but its package doesn't list it as a dependency -->
+    <PackageReference Include="ToolGood.Words.Pinyin" />
 
     <!-- Needed to enable building an MSIX package -->
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools.MSIX">
