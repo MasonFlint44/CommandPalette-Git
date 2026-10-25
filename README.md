@@ -89,6 +89,7 @@ They need an `Ubuntu` WSL distro and VS Code with the WSL extension. Each test w
 
 - **Distro app profiles on Windows repos.** A distro app's profile (e.g. the Ubuntu app's) runs a launcher such as `ubuntu.exe`, which ignores the starting folder, so a Windows repo opened with it lands in the Linux home folder. Choose Terminal's generated profile for the distro (e.g. "Ubuntu (WSL)") instead; it runs `wsl.exe`, which opens `C:\...` folders as `/mnt/c/...`.
 - **Command Prompt profiles on WSL repos.** cmd.exe can't use a `\\wsl.localhost` folder as its starting directory and starts in `C:\Windows` instead.
+- **Windows opening behind the palette.** Command Palette versions bundled before PowerToys 0.101 only let an extension bring windows to the front when you first open its page, and typing a search cancels that, so VS Code and other apps can open behind other windows. Update PowerToys to fix it.
 
 ## Contributing
 
